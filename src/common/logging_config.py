@@ -18,9 +18,16 @@ class JsonFormatter(logging.Formatter):
             "logger": record.name,
             "message": record.getMessage(),
         }
+
         request_id = getattr(record, "request_id", None)
         if request_id:
             payload["request_id"] = request_id
+
+        # Include exception details in server logs.
+        # These details are NOT returned to API clients.
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+
         return json.dumps(payload, default=str)
 
 
