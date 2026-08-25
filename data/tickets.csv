@@ -1,0 +1,4 @@
+ticket_id,priority,issue_type,created_hours,assigned_team,sla_breach
+1,High,Bug,5,L2,Yes
+2,Medium,Task,2,L1,No
+3,High,Incident,6,L3,Yes

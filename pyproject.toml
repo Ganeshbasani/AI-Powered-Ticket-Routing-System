@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sla-ticket-routing"
+version = "0.1.0"
+description = "AI-powered SLA breach prediction and ticket routing for JIRA."
+authors = [ { name = "Basani Ganesh" } ]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "flask==3.0.3",
+    "gunicorn==21.2.0",
+    "joblib==1.5.2",
+    "pandas==2.3.3",
+    "python-dotenv==1.2.1",
+    "scikit-learn==1.7.2",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Ganeshbasani/AI-Powered-Ticket-Routing"
+"Repository" = "https://github.com/Ganeshbasani/AI-Powered-Ticket-Routing"
