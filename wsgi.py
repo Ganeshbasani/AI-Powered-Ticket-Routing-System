@@ -10,36 +10,59 @@ from src.persistence.database import Database
 from src.persistence.repository import TicketRepository
 
 
-def bootstrap_admin() -> None:
-    """Create or reset the deployment administrator safely."""
-    email = os.environ.get("BOOTSTRAP_ADMIN_EMAIL")
-    password = os.environ.get("BOOTSTRAP_ADMIN_PASSWORD")
+def bootstrap_user(
+    repository: TicketRepository,
+    email_env: str,
+    password_env: str,
+    role: str,
+) -> None:
+    """Create or reset a deployment user from environment variables."""
+    email = os.environ.get(email_env)
+    password = os.environ.get(password_env)
 
     if not email or not password:
         return
 
-    database = Database(settings.database_path)
-
-    # IMPORTANT: create database/tables before accessing users.
-    database.initialize()
-
-    repository = TicketRepository(database)
-
     user = repository.get_user_by_email(email)
 
     if user is None:
-        repository.create_user(email, password, "admin")
+        repository.create_user(email, password, role)
         return
 
     repository.update_user(
         user["id"],
-        role="admin",
+        role=role,
         disabled=False,
         password=password,
     )
 
 
-bootstrap_admin()
+def bootstrap_accounts() -> None:
+    database = Database(settings.database_path)
+
+    # Ensure all tables and migrations exist first.
+    database.initialize()
+
+    repository = TicketRepository(database)
+
+    # Production administrator.
+    bootstrap_user(
+        repository,
+        "BOOTSTRAP_ADMIN_EMAIL",
+        "BOOTSTRAP_ADMIN_PASSWORD",
+        "admin",
+    )
+
+    # Safe recruiter/demo account.
+    bootstrap_user(
+        repository,
+        "DEMO_EMAIL",
+        "DEMO_PASSWORD",
+        os.environ.get("DEMO_ROLE", "analyst"),
+    )
+
+
+bootstrap_accounts()
 
 app = create_app()
 
