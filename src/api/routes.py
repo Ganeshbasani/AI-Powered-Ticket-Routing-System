@@ -1,4 +1,4 @@
-"""HTTP boundary for platform, ticket, and prediction services."""
+﻿"""HTTP boundary for platform, ticket, and prediction services."""
 
 from __future__ import annotations
 
@@ -57,9 +57,16 @@ def require_roles(*roles: str) -> Callable:
                 claims = _extensions("token_service").verify(header[7:])
             except AuthenticationError as error:
                 raise APIError(str(error), 401, "authentication_failed") from error
-            user = _extensions("ticket_repository").get_user_by_id(claims["id"])
-            if not user or user.get("disabled") or user["role"] not in roles:
+            # The role in the signed token is authoritative for this session.
+            # The database is still checked for account existence and disabled status.
+            token_role = claims.get("role")
+            if token_role not in roles:
                 raise APIError("You do not have permission for this action.", 403, "forbidden")
+
+            user = _extensions("ticket_repository").get_user_by_id(claims["id"])
+            if not user or user.get("disabled"):
+                raise APIError("You do not have permission for this action.", 403, "forbidden")
+
             g.current_user = user
             return view(*args, **kwargs)
         return wrapped
@@ -216,3 +223,4 @@ def import_mock_jira_ticket():
     ticket = _extensions("ticket_repository").upsert_ticket(ticket_fields)
     _extensions("ticket_repository").audit(g.current_user["email"], "jira_mock_import", "ticket", str(ticket["id"]))
     return {"ticket": ticket, "request_id": g.request_id}, 200
+
