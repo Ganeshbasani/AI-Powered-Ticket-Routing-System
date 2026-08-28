@@ -11,7 +11,7 @@ from src.persistence.repository import TicketRepository
 
 
 def bootstrap_admin() -> None:
-    """Create or reset the deployment admin from environment variables."""
+    """Create or reset the deployment administrator safely."""
     email = os.environ.get("BOOTSTRAP_ADMIN_EMAIL")
     password = os.environ.get("BOOTSTRAP_ADMIN_PASSWORD")
 
@@ -19,6 +19,10 @@ def bootstrap_admin() -> None:
         return
 
     database = Database(settings.database_path)
+
+    # IMPORTANT: create database/tables before accessing users.
+    database.initialize()
+
     repository = TicketRepository(database)
 
     user = repository.get_user_by_email(email)
