@@ -15,15 +15,19 @@
 ## 🖥️ Product UI Showcase
 
 ### 📊 Operations Dashboard
+
 ![Operations Dashboard](docs/screenshots/dashboard.png)
 
 ### 🎫 Ticket Management
+
 ![Ticket Management](docs/screenshots/tickets.png)
 
 ### 🤖 SLA Prediction History
+
 ![SLA Prediction History](docs/screenshots/predictions.png)
 
 ### 📈 Analytics Dashboard
+
 ![Analytics Dashboard](docs/screenshots/analytics.png)
 
 ---
@@ -91,8 +95,8 @@ for meaningful ML evaluation.
 
 # 📌 Table of Contents
 
-- Live Demo
-- UI Showcase
+- [Live Demo](#-live-demo--recruiter-access)
+- [UI Showcase](#-product-ui-showcase)
 - Overview
 - Features
 - Tech Stack
@@ -113,29 +117,28 @@ for meaningful ML evaluation.
 
 Managing support tickets efficiently is critical for reducing response times and maintaining Service Level Agreements (SLAs).
 
-This project demonstrates how machine learning can assist support teams by predicting whether a ticket is likely to breach its SLA and providing a transparent routing recommendation.
+This project demonstrates how Machine Learning can assist ticket management by predicting whether a ticket is likely to breach its SLA while also recommending the appropriate routing team.
 
-The project is implemented as a backend-focused prototype with a REST API built using Flask.
+The application combines a Flask REST API with a lightweight web frontend for creating tickets, reviewing predictions, and viewing operational analytics.
 
 ---
 
 # ✨ Features
 
-✅ Predict SLA Breach Risk
-
-✅ Intelligent Ticket Routing
-
-✅ REST API using Flask
-
-✅ Random Forest Machine Learning Model
-
-✅ Automatic Model Training
-
-✅ Health Check Endpoint
-
-✅ Clean Project Structure
-
-✅ Automated Unit Testing
+- ✅ SLA breach-risk prediction
+- ✅ Intelligent baseline ticket routing
+- ✅ Automatic prediction after ticket creation
+- ✅ Prediction history
+- ✅ Ticket management dashboard
+- ✅ Analytics dashboard
+- ✅ REST API using Flask
+- ✅ Random Forest machine learning model
+- ✅ Automatic model training
+- ✅ Authentication and role-based access control
+- ✅ Health and readiness endpoints
+- ✅ Automated testing with Pytest
+- ✅ Docker-based deployment
+- ✅ Render deployment
 
 ---
 
@@ -178,27 +181,33 @@ The project is implemented as a backend-focused prototype with a REST API built 
 
 ```text
 AI-Powered-Ticket-Routing-System
-│
-Ã¢”Å“├├ api/
-│
-Ã¢”Å“├├ data/
-│   └├├ tickets.csv
-│
-Ã¢”Å“├├ docs/
-│
-Ã¢”Å“├├ ml_model/
-│
-Ã¢”Å“├├ src/
-│
-Ã¢”Å“├├ tests/
-│
-Ã¢”Å“├├ app.py
-│
-Ã¢”Å“├├ requirements.txt
-│
-Ã¢”Å“├├ requirements-dev.txt
-│
-└├├ README.md
+|
+├── data/
+|   └── tickets.csv
+|
+├── docs/
+|   ├── screenshots/
+|   |   ├── dashboard.png
+|   |   ├── tickets.png
+|   |   ├── predictions.png
+|   |   └── analytics.png
+|   ├── product.md
+|   ├── platform.md
+|   ├── security.md
+|   ├── dataset_contract.md
+|   ├── dataset_profile.md
+|   └── ml_data_audit.md
+|
+├── ml_model/
+├── src/
+├── tests/
+├── frontend/
+├── app.py
+├── Dockerfile
+├── render.yaml
+├── requirements.txt
+├── requirements-dev.txt
+└── README.md
 ```
 
 ---
@@ -210,7 +219,7 @@ AI-Powered-Ticket-Routing-System
 ```bash
 git clone https://github.com/Ganeshbasani/AI-Powered-Ticket-Routing-System.git
 
-cd AI-Powered-Ticket-Routing
+cd AI-Powered-Ticket-Routing-System
 ```
 
 ---
@@ -257,7 +266,7 @@ http://127.0.0.1:5000
 
 ---
 
-# Ã°Å¸Å’ REST API
+# °Å¸Å’ REST API
 
 ## Health Check
 
@@ -301,7 +310,7 @@ Example Response
 
 ---
 
-# 🤖 Machine Learning Workflow
+# °Å¸¤- Machine Learning Workflow
 
 ```text
 Load Dataset
@@ -342,17 +351,17 @@ python -m pytest -q
 
 # 📊 Current Capabilities
 
-Ã¢Å“” Automatic model training if no saved model exists
+¢Å“ Automatic model training if no saved model exists
 
-Ã¢Å“” Predicts a binary SLA breach-risk label
+¢Å“ Predicts a binary SLA breach-risk label
 
-Ã¢Å“” Suggests target routing team
+¢Å“ Suggests target routing team
 
-Ã¢Å“” Uses Random Forest classifier
+¢Å“ Uses Random Forest classifier
 
-Ã¢Å“” RESTful API interface
+¢Å“ RESTful API interface
 
-Ã¢Å“” Lightweight backend implementation
+¢Å“ Lightweight backend implementation
 
 ## Data and Model Limitations
 
@@ -386,7 +395,7 @@ This project is licensed under the **MIT License**.
 
 ### **Basani Ganesh**
 
-🎓 B.Tech Ã¢â‚¬“ Computer Science & Engineering
+🎓 B.Tech — Computer Science & Engineering
 
 💻 Passionate about Full Stack Development, AI & Machine Learning
 
