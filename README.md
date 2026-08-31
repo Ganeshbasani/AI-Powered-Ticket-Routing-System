@@ -1,6 +1,6 @@
-<div align="center">
+﻿<div align="center">
 
-# 🎫 AI-Powered Ticket Routing & SLA Breach Prediction
+# Ã°Å¸Å½Â« AI-Powered Ticket Routing & SLA Breach Prediction
 
 <p align="center">
   <img src="https://readme-typing-svg.demolab.com?font=Poppins&weight=600&size=28&duration=3000&pause=1000&color=00C2FF&center=true&vCenter=true&width=900&lines=AI-Powered+Ticket+Routing;SLA+Breach+Prediction;Machine+Learning+%2B+Flask+REST+API;Python+%7C+Scikit-Learn+%7C+Random+Forest" alt="Typing Animation"/>
@@ -27,7 +27,7 @@
 
 ---
 
-### 🚀 Intelligent Ticket Routing using Machine Learning
+### Ã°Å¸Å¡â‚¬ Intelligent Ticket Routing using Machine Learning
 
 Predicts a prototype **SLA breach-risk label** and presents a transparent baseline team recommendation for tickets managed through a Flask REST API and product frontend.
 
@@ -35,6 +35,63 @@ Predicts a prototype **SLA breach-risk label** and presents a transparent baseli
 
 ---
 
+## ðŸš€ Live Demo â€” Recruiter Access
+
+### ðŸŒ Try the Application
+
+**Live Demo:** https://ai-powered-ticket-routing-system.onrender.com
+
+> **Demo Login**
+>
+> **Demo ID:** Demo@gmail.com
+>
+> **Password:** Demo@1234
+>
+> This dedicated demo account lets recruiters and reviewers explore the deployed application.
+
+### ðŸ–¥ï¸ Application UI Showcase
+
+#### ðŸ“Š Operations Dashboard
+![Operations Dashboard](docs/screenshots/dashboard.png)
+
+#### ðŸŽ« Ticket Management
+![Ticket Management](docs/screenshots/tickets.png)
+
+#### ðŸ¤– SLA Prediction History
+![Prediction History](docs/screenshots/predictions.png)
+
+#### ðŸ“ˆ Analytics Dashboard
+![Analytics Dashboard](docs/screenshots/analytics.png)
+
+---
+
+# 🚀 Live Demo — Recruiter Access
+
+### 🌐 Try the Deployed Application
+
+**Live Demo:** https://ai-powered-ticket-routing-system.onrender.com
+
+> ### 🔐 Demo Credentials
+> **Demo ID:** `Demo@gmail.com`  
+> **Password:** `Demo@1234`
+
+Explore the deployed ticket-management, automatic prediction, prediction-history, and analytics workflows.
+
+## 🖥️ Product UI Showcase
+
+### 📊 Operations Dashboard
+![Operations Dashboard](docs/screenshots/dashboard.png)
+
+### 🎫 Ticket Management
+![Ticket Management](docs/screenshots/tickets.png)
+
+### 🤖 SLA Prediction History
+![SLA Prediction History](docs/screenshots/predictions.png)
+
+### 📈 Analytics Dashboard
+![Analytics Dashboard](docs/screenshots/analytics.png)
+
+---
 ## Production API Contract
 
 ## Security and Administration
@@ -96,7 +153,7 @@ for meaningful ML evaluation.
 
 ---
 
-# 📌 Table of Contents
+# Ã°Å¸â€œÅ’ Table of Contents
 
 - Overview
 - Features
@@ -114,7 +171,7 @@ for meaningful ML evaluation.
 
 ---
 
-# 📖 Overview
+# Ã°Å¸â€œâ€“ Overview
 
 Managing support tickets efficiently is critical for reducing response times and maintaining Service Level Agreements (SLAs).
 
@@ -124,27 +181,27 @@ The project is implemented as a backend-focused prototype with a REST API built 
 
 ---
 
-# ✨ Features
+# Ã¢Å“Â¨ Features
 
-✅ Predict SLA Breach Risk
+Ã¢Å“â€¦ Predict SLA Breach Risk
 
-✅ Intelligent Ticket Routing
+Ã¢Å“â€¦ Intelligent Ticket Routing
 
-✅ REST API using Flask
+Ã¢Å“â€¦ REST API using Flask
 
-✅ Random Forest Machine Learning Model
+Ã¢Å“â€¦ Random Forest Machine Learning Model
 
-✅ Automatic Model Training
+Ã¢Å“â€¦ Automatic Model Training
 
-✅ Health Check Endpoint
+Ã¢Å“â€¦ Health Check Endpoint
 
-✅ Clean Project Structure
+Ã¢Å“â€¦ Clean Project Structure
 
-✅ Automated Unit Testing
+Ã¢Å“â€¦ Automated Unit Testing
 
 ---
 
-# 🛠 Tech Stack
+# Ã°Å¸â€ºÂ  Tech Stack
 
 | Category | Technology |
 |-----------|------------|
@@ -157,58 +214,58 @@ The project is implemented as a backend-focused prototype with a REST API built 
 
 ---
 
-# 🧠 Project Architecture
+# Ã°Å¸Â§Â  Project Architecture
 
 ```text
                 Ticket Data
-                     │
-                     ▼
+                     Ã¢â€â€š
+                     Ã¢â€“Â¼
               Data Preprocessing
-                     │
-                     ▼
+                     Ã¢â€â€š
+                     Ã¢â€“Â¼
           Random Forest Training
-                     │
+                     Ã¢â€â€š
              Saved ML Model
-                     │
-                     ▼
+                     Ã¢â€â€š
+                     Ã¢â€“Â¼
              Flask REST API
-                     │
-                     ▼
+                     Ã¢â€â€š
+                     Ã¢â€“Â¼
         SLA Prediction + Team Routing
 ```
 
 ---
 
-# 📂 Project Structure
+# Ã°Å¸â€œâ€š Project Structure
 
 ```text
 AI-Powered-Ticket-Routing
-│
-├── api/
-│
-├── data/
-│   └── tickets.csv
-│
-├── docs/
-│
-├── ml_model/
-│
-├── src/
-│
-├── tests/
-│
-├── app.py
-│
-├── requirements.txt
-│
-├── requirements-dev.txt
-│
-└── README.md
+Ã¢â€â€š
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ api/
+Ã¢â€â€š
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ data/
+Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ tickets.csv
+Ã¢â€â€š
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ docs/
+Ã¢â€â€š
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ ml_model/
+Ã¢â€â€š
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ src/
+Ã¢â€â€š
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ tests/
+Ã¢â€â€š
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ app.py
+Ã¢â€â€š
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ requirements.txt
+Ã¢â€â€š
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ requirements-dev.txt
+Ã¢â€â€š
+Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ README.md
 ```
 
 ---
 
-# ⚙️ Installation
+# Ã¢Å¡â„¢Ã¯Â¸Â Installation
 
 ## Clone Repository
 
@@ -248,7 +305,7 @@ pip install -r requirements.txt
 
 ---
 
-# ▶️ Run the Application
+# Ã¢â€“Â¶Ã¯Â¸Â Run the Application
 
 ```bash
 python app.py
@@ -262,7 +319,7 @@ http://127.0.0.1:5000
 
 ---
 
-# 🌐 REST API
+# Ã°Å¸Å’Â REST API
 
 ## Health Check
 
@@ -306,30 +363,30 @@ Example Response
 
 ---
 
-# 🤖 Machine Learning Workflow
+# Ã°Å¸Â¤â€“ Machine Learning Workflow
 
 ```text
 Load Dataset
-      │
-      ▼
+      Ã¢â€â€š
+      Ã¢â€“Â¼
 Feature Selection
-      │
-      ▼
+      Ã¢â€â€š
+      Ã¢â€“Â¼
 Train Random Forest
-      │
-      ▼
+      Ã¢â€â€š
+      Ã¢â€“Â¼
 Save Model
-      │
-      ▼
+      Ã¢â€â€š
+      Ã¢â€“Â¼
 Load Model
-      │
-      ▼
+      Ã¢â€â€š
+      Ã¢â€“Â¼
 Prediction API
 ```
 
 ---
 
-# 🧪 Running Tests
+# Ã°Å¸Â§Âª Running Tests
 
 Install development dependencies
 
@@ -345,19 +402,19 @@ python -m pytest -q
 
 ---
 
-# 📊 Current Capabilities
+# Ã°Å¸â€œÅ  Current Capabilities
 
-✔ Automatic model training if no saved model exists
+Ã¢Å“â€ Automatic model training if no saved model exists
 
-✔ Predicts a binary SLA breach-risk label
+Ã¢Å“â€ Predicts a binary SLA breach-risk label
 
-✔ Suggests target routing team
+Ã¢Å“â€ Suggests target routing team
 
-✔ Uses Random Forest classifier
+Ã¢Å“â€ Uses Random Forest classifier
 
-✔ RESTful API interface
+Ã¢Å“â€ RESTful API interface
 
-✔ Lightweight backend implementation
+Ã¢Å“â€ Lightweight backend implementation
 
 ## Data and Model Limitations
 
@@ -370,7 +427,7 @@ target definition, validation rules, artifact design, and evaluation limits.
 
 ---
 
-# 🚀 Future Improvements
+# Ã°Å¸Å¡â‚¬ Future Improvements
 
 - Representative, timestamped ticket data before evaluating or expanding ML
 - Live JIRA provider only with approved credentials and network integration
@@ -379,7 +436,7 @@ target definition, validation rules, artifact design, and evaluation limits.
 
 ---
 
-# 📜 License
+# Ã°Å¸â€œÅ“ License
 
 This project is licensed under the **MIT License**.
 
@@ -387,17 +444,19 @@ This project is licensed under the **MIT License**.
 
 <div align="center">
 
-## 👨‍💻 Developer
+## Ã°Å¸â€˜Â¨Ã¢â‚¬ÂÃ°Å¸â€™Â» Developer
 
 ### **Basani Ganesh**
 
-🎓 B.Tech – Computer Science & Engineering
+Ã°Å¸Å½â€œ B.Tech Ã¢â‚¬â€œ Computer Science & Engineering
 
-💻 Passionate about Full Stack Development, AI & Machine Learning
+Ã°Å¸â€™Â» Passionate about Full Stack Development, AI & Machine Learning
 
-🔗 GitHub
+Ã°Å¸â€â€” GitHub
 
 https://github.com/Ganeshbasani
 
 
 </div>
+
+
