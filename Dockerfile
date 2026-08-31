@@ -1,4 +1,4 @@
-﻿# ---------- Frontend build ----------
+# ---------- Frontend build ----------
 FROM node:24-alpine AS frontend-build
 
 WORKDIR /build/frontend
@@ -37,6 +37,6 @@ USER app
 
 EXPOSE 10000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD-SHELL python -c "import os; from urllib.request import urlopen; urlopen('http://127.0.0.1:' + os.environ.get('PORT','10000') + '/api/v1/health', timeout=3)"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD python -c "import os; from urllib.request import urlopen; urlopen('http://127.0.0.1:' + os.environ.get('PORT','10000') + '/api/v1/health', timeout=3)"
 
 CMD ["sh","-c","exec gunicorn --bind 0.0.0.0:${PORT:-10000} --workers ${WEB_CONCURRENCY:-2} --timeout 30 --access-logfile - --error-logfile - wsgi:app"]
