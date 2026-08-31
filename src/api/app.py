@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from flask import Flask, Response, g, jsonify, request, send_from_directory
+from flask import Flask, Response, g, jsonify, request
 
 from src.api.errors import APIError
 from src.api.routes import api_blueprint
@@ -24,15 +24,17 @@ def create_app(
     rate_limiter: InMemoryRateLimiter | None = None,
     rate_limits: dict[str, int] | None = None,
 ) -> Flask:
-    """Create an application with request IDs and safe error responses."""
+    """Create the production Flask application."""
 
     logger = configure_logging(settings.log_level)
 
     frontend_directory = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
-    # Disable Flask's automatic /app/<filename> static route.
-    # Frontend files are served explicitly below.
-    app = Flask(__name__, static_folder=None)
+    app = Flask(
+        __name__,
+        static_folder=str(frontend_directory),
+        static_url_path="",
+    )
 
     app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
 
@@ -42,7 +44,6 @@ def create_app(
     database.initialize()
 
     repository = TicketRepository(database)
-
     app.extensions["ticket_repository"] = repository
 
     app.extensions["ticket_service"] = TicketService(
@@ -64,18 +65,22 @@ def create_app(
 
     app.register_blueprint(api_blueprint, url_prefix="/api/v1")
 
-    # Serve the frontend entry point.
     @app.get("/")
     def frontend() -> Response:
-        return send_from_directory(frontend_directory, "index.html")
+        return app.send_static_file("index.html")
 
-    # Serve frontend assets such as:
-    # /style.css
-    # /app.js
-    # /favicon.ico
     @app.get("/<path:filename>")
     def frontend_static(filename: str) -> Response:
-        return send_from_directory(frontend_directory, filename)
+        """Serve frontend assets and fall back to index.html for SPA routes."""
+        normalized = filename.lstrip("/")
+        requested = frontend_directory / normalized
+        if requested.is_file():
+            return app.send_static_file(normalized)
+        if normalized == "favicon.ico":
+            return Response(status=204)
+        if Path(normalized).suffix:
+            return jsonify({"error":{"code":"not_found","message":"Frontend resource not found.","request_id":g.request_id}}), 404
+        return app.send_static_file("index.html")
 
     app.logger.handlers = logger.handlers
     app.logger.setLevel(logger.level)
@@ -132,10 +137,23 @@ def create_app(
             error.status_code,
         )
 
+    @app.errorhandler(404)
+    def handle_not_found(error: Exception) -> tuple[Response, int]:
+        return (
+            jsonify(
+                {
+                    "error": {
+                        "code": "not_found",
+                        "message": "The requested resource was not found.",
+                        "request_id": g.request_id,
+                    }
+                }
+            ),
+            404,
+        )
+
     @app.errorhandler(413)
-    def handle_request_too_large(
-        error: Exception,
-    ) -> tuple[Response, int]:
+    def handle_request_too_large(error: Exception) -> tuple[Response, int]:
         return (
             jsonify(
                 {
@@ -150,9 +168,7 @@ def create_app(
         )
 
     @app.errorhandler(Exception)
-    def handle_unexpected_error(
-        error: Exception,
-    ) -> tuple[Response, int]:
+    def handle_unexpected_error(error: Exception) -> tuple[Response, int]:
         app.logger.exception(
             "unexpected_error",
             extra={"request_id": g.request_id},
@@ -177,4 +193,3 @@ def create_app(
     )
 
     return app
-

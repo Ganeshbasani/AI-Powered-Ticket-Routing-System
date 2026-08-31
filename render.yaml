@@ -1,0 +1,22 @@
+﻿services:
+  - type: web
+    name: ai-powered-ticket-routing-system
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: "False"
+      - key: PORT
+        value: "10000"
+      - key: FLASK_PORT
+        value: "10000"
+      - key: AUTH_SECRET_KEY
+        generateValue: true
+      - key: LOG_LEVEL
+        value: INFO
