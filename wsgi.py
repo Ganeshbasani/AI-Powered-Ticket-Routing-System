@@ -1,4 +1,4 @@
-﻿"""WSGI entry point for the SLA prediction service."""
+"""WSGI entry point for the SLA prediction service."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from src.api.app import create_app
 from src.config.settings import settings
 from src.persistence.database import Database
 from src.persistence.repository import TicketRepository
+from src.ml.model import ModelService
 
 
 def bootstrap_user(
@@ -64,7 +65,9 @@ def bootstrap_accounts() -> None:
 
 bootstrap_accounts()
 
-app = create_app()
+model_service = ModelService()
+model_service.ensure_model()
+app = create_app(model_service=model_service)
 
 if __name__ == "__main__":
     app.run()

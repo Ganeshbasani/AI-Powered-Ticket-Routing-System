@@ -29,6 +29,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=app:app . .
 
+# Fail the image build if the checked-in production model artifact is missing.
+RUN test -f /app/ml_model/ticket_triage_models.joblib
+
 COPY --from=frontend-build --chown=app:app /build/frontend/dist ./frontend/dist
 
 RUN mkdir -p /app/data && chown -R app:app /app/data

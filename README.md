@@ -3,7 +3,7 @@
 # 🎫 AI-Powered Ticket Routing & SLA Breach Prediction
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Poppins&weight=600&size=28&duration=3000&pause=1000&color=00C2FF&center=true&vCenter=true&width=900&lines=AI-Powered+Ticket+Routing;SLA+Breach+Prediction;Machine+Learning+%2B+Flask+REST+API;Python+%7C+Scikit-Learn+%7C+Random+Forest" alt="Typing Animation"/>
+  <img src="https://readme-typing-svg.demolab.com?font=Poppins&weight=600&size=28&duration=3000&pause=1000&color=00C2FF&center=true&vCenter=true&width=900&lines=AI-Powered+Ticket+Routing;SLA+Breach+Prediction;Machine+Learning+%2B+Flask+REST+API;Python+%7C+Scikit-Learn+%7C+TF-IDF+%2B+Logistic+Regression" alt="Typing Animation"/>
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 
 ### 🚀 Intelligent Ticket Routing with Machine Learning
 
-A practical support-ticket platform that uses machine learning to predict SLA breach risk and combines that prediction with a transparent baseline team recommendation. The project includes a Flask REST API and a web-based operations dashboard.
+A practical support-ticket platform that uses machine learning to predict SLA breach risk and recommend the resolving team from ticket text and metadata. The project includes a Flask REST API and a web-based operations dashboard.
 
 </div>
 
@@ -100,14 +100,14 @@ The application combines a Flask REST API with a lightweight web frontend for cr
 # ✨ Features
 
 - ✅ SLA breach-risk prediction
-- ✅ Intelligent baseline ticket routing
+- ✅ ML-based ticket routing from summary and description
 - ✅ Automatic prediction after ticket creation
 - ✅ Prediction history
 - ✅ Ticket management dashboard
 - ✅ Analytics dashboard
 - ✅ REST API using Flask
-- ✅ Random Forest machine learning model
-- ✅ Automatic model training
+- ✅ TF-IDF + Logistic Regression routing and SLA models
+- ✅ Reproducible model training and evaluation
 - ✅ Authentication and role-based access control
 - ✅ Health and readiness endpoints
 - ✅ Automated testing with Pytest
@@ -127,7 +127,7 @@ The application combines a Flask REST API with a lightweight web frontend for cr
 | Model Storage | Joblib |
 | Frontend | HTML, CSS, JavaScript |
 | Testing | Pytest |
-| Deployment | Docker, Render |
+| Deployment | Docker, Render, AWS ECR, App Runner |
 
 ---
 
@@ -143,7 +143,7 @@ The application combines a Flask REST API with a lightweight web frontend for cr
                 Feature Selection
                          |
                          v
-               Random Forest Model
+               Routing Model + SLA Model
                          |
                          v
                   SLA Prediction
@@ -287,8 +287,11 @@ POST /api/v1/predict
 
 ```json
 {
+  "summary": "VPN connection keeps dropping",
+  "description": "Users cannot stay connected to the corporate network.",
   "priority": "High",
-  "created_hours": 8
+  "issue_type": "Network",
+  "created_hours": 10
 }
 ```
 
@@ -296,12 +299,17 @@ POST /api/v1/predict
 
 ```json
 {
-  "assigned_team": "L2",
-  "sla_breach_risk": "High"
+  "assigned_team": "L2-Network",
+  "recommended_team": "L2-Network",
+  "routing_confidence": 0.91,
+  "sla_breach_risk": "High",
+  "sla_probability": 0.87,
+  "explanation": ["High priority increases urgency.", "Ticket age is already above 8 hours.", "Issue type is Network."],
+  "model_version": "triage-v1.0"
 }
 ```
 
-The response also includes the model version and request ID. The API intentionally does not expose an uncalibrated probability.
+The probability and confidence fields are model outputs. They are reported as prediction scores, not calibrated guarantees.
 
 ## System Endpoints
 
@@ -366,7 +374,7 @@ Validate and Prepare Data
 Select Prediction Features
        |
        v
-Train Random Forest
+Train Ticket Triage Models
        |
        v
 Save Model Artifact
@@ -383,14 +391,15 @@ SLA Risk + Routing Recommendation
 
 ### Prediction Features
 
-The current prediction pipeline uses:
+Stage 1 uses ticket text plus prediction-time metadata:
 
-| Feature | Description |
+| Feature | Role |
 |---|---|
-| `priority` | Ticket priority |
-| `created_hours` | Approximate ticket age in hours |
+| `summary` + `description` | TF-IDF text features |
+| `priority`, `issue_type`, `project`, `component`, `customer_tier`, `channel` | Categorical context |
+| `created_hours` | Numeric ticket age |
 
-The model does not use `ticket_id`, `assigned_team`, or the target `sla_breach` field as prediction features.
+The models do not use `ticket_id`, `final_team`, or the target `sla_breach` as prediction features.
 
 ---
 
@@ -408,9 +417,17 @@ docker build -t sla-ticket-routing .
 docker run --rm -p 10000:10000 --env-file .env sla-ticket-routing
 ```
 
-The production container uses a non-root user and is configured for deployment on Render.
+The production container uses a non-root user, validates the ML artifact during image build, disables runtime model training in production, and exposes `/api/v1/health` and `/api/v1/ready` for platform health checks.
 
-**Live deployment:** https://ai-powered-ticket-routing-system.onrender.com/
+The Docker build also excludes local SQLite database files so development ticket data is not accidentally baked into the cloud image.
+
+**Render deployment:** https://ai-powered-ticket-routing-system.onrender.com/
+
+## ☁️ AWS CI/CD
+
+Stage 3 adds an AWS-ready delivery path: GitHub Actions authenticates to AWS with OIDC, builds the Docker image, pushes commit-SHA and `latest` tags to Amazon ECR, and can feed an AWS App Runner service configured for automatic ECR deployments.
+
+See [AWS App Runner deployment](docs/aws/app-runner-deployment.md) and [Stage 3 upgrade](STAGE3_UPGRADE.md).
 
 ---
 
@@ -422,11 +439,7 @@ Run the complete test suite:
 python -m pytest -q
 ```
 
-The verified development test suite passes:
-
-```text
-42 passed
-```
+The ML-focused Stage 1 tests pass locally with the project dependencies installed.
 
 The project also includes frontend build checks and a GitHub Actions CI workflow.
 
@@ -434,11 +447,9 @@ The project also includes frontend build checks and a GitHub Actions CI workflow
 
 # 📊 Dataset and Model Limitations
 
-The bundled dataset contains only three sample tickets. It is sufficient to exercise the training and prediction workflow, but it is not large enough to support meaningful claims about production model accuracy.
+The bundled development dataset contains 1,500 synthetic tickets. It is large enough to exercise a reproducible train/test evaluation, but synthetic data must not be presented as evidence of production performance.
 
-The current model is therefore presented as a working prototype rather than a production-grade predictive system.
-
-See [ML Data Audit](docs/ml_data_audit.md) and [Dataset Contract](docs/dataset_contract.md) for the documented data and evaluation limitations.
+See [ML Data Audit](docs/ml_data_audit.md) and [Dataset Contract](docs/dataset_contract.md) for the documented feature schema and leakage rules.
 
 ---
 
@@ -458,13 +469,14 @@ See [ML Data Audit](docs/ml_data_audit.md) and [Dataset Contract](docs/dataset_c
 
 # 🚀 Future Improvements
 
-- Add a larger representative ticket dataset
-- Evaluate the model with robust validation metrics
-- Introduce a dedicated routing model
+- Replace synthetic data with a licensed, representative historical ticket dataset
+- Use chronological validation when trustworthy timestamps are available
+- Add human override feedback to improve routing over time
 - Integrate a real JIRA provider
 - Add browser-level UI tests
 - Add shared rate-limit storage for multi-instance deployments
-- Improve model monitoring and retraining workflows
+- Move persistent ticket data from SQLite to a managed PostgreSQL database for multi-instance cloud deployments
+- Add deeper ML monitoring and retraining workflows when a representative historical dataset is available
 
 ---
 
@@ -488,3 +500,31 @@ Focused on software development, AI, and machine learning.
 https://github.com/Ganeshbasani
 
 </div>
+
+## Stage 2 — Human-in-the-Loop Triage
+
+The current build adds a human review layer on top of the Stage 1 AI triage pipeline.
+
+- Ticket detail view with AI recommendation, route confidence, SLA breach probability, model version, and explanation.
+- Support agents/admins can **accept** an AI recommendation or **override** the team with a reason.
+- Feedback is stored against the exact prediction ID and the selected team becomes the ticket's current assignment.
+- Prediction history and analytics expose human feedback and override counts.
+- Database migration 6 adds the `feedback` table with foreign keys and indexes.
+
+### Feedback API
+
+`POST /api/v1/tickets/<ticket_id>/feedback`
+
+Accept an AI recommendation:
+
+```json
+{"prediction_id":12,"decision":"accept","comment":"AI route accepted."}
+```
+
+Override the recommended team:
+
+```json
+{"prediction_id":12,"decision":"override","corrected_team":"L3-Network","comment":"Specialized customer issue."}
+```
+
+View feedback history with `GET /api/v1/tickets/<ticket_id>/feedback`.

@@ -1,4 +1,4 @@
-"""Standalone training script for the SLA prediction model."""
+"""Standalone training script for the ticket triage models."""
 
 from __future__ import annotations
 
@@ -15,6 +15,10 @@ from src.ml.model import ModelService
 def main() -> None:
     service = ModelService()
     service.ensure_model()
+    print("Model version:", "triage-v1.0")
+    print("Evaluation:")
+    for name, metrics in service.evaluation.items():
+        print(f"  {name}: {metrics}")
 
 
 if __name__ == "__main__":

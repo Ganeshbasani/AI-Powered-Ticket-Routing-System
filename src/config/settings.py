@@ -56,6 +56,7 @@ class Settings:
     login_rate_limit: int
     prediction_rate_limit: int
     jira_import_rate_limit: int
+    allow_model_training: bool
     priority_map: dict[str, int]
 
     @classmethod
@@ -77,6 +78,10 @@ class Settings:
             raise ConfigurationError("FLASK_PORT must be between 1 and 65535.")
 
         flask_debug = _parse_bool(values.get("FLASK_DEBUG", "False"), "FLASK_DEBUG")
+        allow_model_training = _parse_bool(
+            values.get("ALLOW_MODEL_TRAINING", "False" if app_environment == "production" else "True"),
+            "ALLOW_MODEL_TRAINING",
+        )
         if app_environment == "production" and flask_debug:
             raise ConfigurationError("FLASK_DEBUG cannot be enabled in production.")
         auth_secret_key = values.get("AUTH_SECRET_KEY")
@@ -94,7 +99,7 @@ class Settings:
 
         return cls(
             model_path=_workspace_path(
-                values.get("MODEL_PATH", "ml_model/sla_model.joblib"), "MODEL_PATH", base_dir
+                values.get("MODEL_PATH", "ml_model/ticket_triage_models.joblib"), "MODEL_PATH", base_dir
             ),
             data_path=_workspace_path(values.get("DATA_PATH", "data/tickets.csv"), "DATA_PATH", base_dir),
             database_path=_workspace_path(values.get("DATABASE_PATH", "data/platform.db"), "DATABASE_PATH", base_dir),
@@ -107,6 +112,7 @@ class Settings:
             login_rate_limit=positive("LOGIN_RATE_LIMIT", "10"),
             prediction_rate_limit=positive("PREDICTION_RATE_LIMIT", "60"),
             jira_import_rate_limit=positive("JIRA_IMPORT_RATE_LIMIT", "20"),
+            allow_model_training=allow_model_training,
             priority_map=DEFAULT_PRIORITY_MAP.copy(),
         )
 

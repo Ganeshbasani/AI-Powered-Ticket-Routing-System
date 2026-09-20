@@ -34,8 +34,8 @@ def test_login_disabled_token_rbac_and_audit(tmp_path):
 def test_invalid_token_limits_size_headers_and_bootstrap(tmp_path):
     app, repo, admin, _ = _setup(tmp_path, {"login": 1, "prediction": 1, "jira_import": 1}); client = app.test_client()
     assert client.get("/api/v1/tickets", headers={"Authorization": "Bearer malformed"}).status_code == 401
-    assert client.post("/api/v1/predict", json={"priority": "High", "created_hours": 1}).status_code == 200
-    assert client.post("/api/v1/predict", json={"priority": "High", "created_hours": 1}).status_code == 429
+    assert client.post("/api/v1/predict", json={"summary": "VPN issue", "priority": "High", "created_hours": 1}).status_code == 200
+    assert client.post("/api/v1/predict", json={"summary": "VPN issue", "priority": "High", "created_hours": 1}).status_code == 429
     health = client.get("/api/v1/health"); assert health.status_code == 200 and health.headers["X-Content-Type-Options"] == "nosniff" and health.headers["Cache-Control"] == "no-store"
     oversized = client.post("/api/v1/tickets", headers=admin, data="x" * (1024 * 1024 + 1), content_type="application/json")
     assert oversized.status_code == 413 and "traceback" not in oversized.get_data(as_text=True).lower()

@@ -1,6 +1,6 @@
 # Dataset Contract
 
-Schema version `1.0` provides one canonical representation for CSV, JSON,
+Schema version `1.1` provides one canonical representation for CSV, JSON,
 SQLite ticket exports, and mock-JIRA exports. Prediction-time columns are
 `priority`, `created_hours`, `issue_type`, `project`, `component`, `summary`,
 `description`, and `created_timestamp`. Outcome-only columns include

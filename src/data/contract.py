@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-SCHEMA_VERSION = "1.0"
-PREDICTION_FIELDS = ("priority", "created_hours", "issue_type", "project", "component", "summary", "description", "created_timestamp")
+SCHEMA_VERSION = "1.1"
+PREDICTION_FIELDS = ("priority", "created_hours", "issue_type", "project", "component", "customer_tier", "channel", "summary", "description", "created_timestamp")
 OUTCOME_FIELDS = ("actual_sla_breach", "resolution_timestamp", "resolution_time", "final_status", "final_team")
 METADATA_FIELDS = ("dataset_version", "ingestion_source", "imported_at")
 IDENTIFIER_FIELDS = ("ticket_id", "jira_issue_key")
@@ -25,9 +25,13 @@ class FeatureDefinition:
 FEATURE_REGISTRY = {
     "priority": FeatureDefinition("priority", "categorical", True, "Ticket priority at prediction time", "ordinal encode", "low"),
     "created_hours": FeatureDefinition("created_hours", "numeric", True, "Elapsed ticket age at prediction time", "finite non-negative float", "medium"),
-    "issue_type": FeatureDefinition("issue_type", "categorical", True, "Ticket issue type", "categorical encode when introduced", "low"),
-    "summary": FeatureDefinition("summary", "text", True, "Ticket summary", "future NLP pipeline", "low"),
-    "description": FeatureDefinition("description", "text", True, "Ticket description", "future NLP pipeline", "low"),
+    "issue_type": FeatureDefinition("issue_type", "categorical", True, "Ticket issue type", "one-hot encode", "low"),
+    "project": FeatureDefinition("project", "categorical", True, "Product/project context", "one-hot encode", "low"),
+    "component": FeatureDefinition("component", "categorical", True, "Product component", "one-hot encode", "low"),
+    "customer_tier": FeatureDefinition("customer_tier", "categorical", True, "Customer segment available at triage", "one-hot encode", "low"),
+    "channel": FeatureDefinition("channel", "categorical", True, "Ticket intake channel", "one-hot encode", "low"),
+    "summary": FeatureDefinition("summary", "text", True, "Ticket summary", "TF-IDF", "low"),
+    "description": FeatureDefinition("description", "text", True, "Ticket description", "TF-IDF", "low"),
     "created_timestamp": FeatureDefinition("created_timestamp", "timestamp", True, "Ticket creation timestamp", "chronological split anchor", "low"),
     "actual_sla_breach": FeatureDefinition("actual_sla_breach", "label", False, "Observed SLA outcome", "target only", "critical"),
     "final_status": FeatureDefinition("final_status", "categorical", False, "Status after ticket completion", "exclude", "critical"),

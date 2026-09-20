@@ -1,0 +1,31 @@
+{
+  "model_version": "triage-v1.0",
+  "artifact_version": 2,
+  "training_samples": 1500,
+  "evaluation": {
+    "status": "evaluated",
+    "dataset_type": "synthetic_development_data",
+    "test_size": 0.2,
+    "training_samples": 1500,
+    "routing": {
+      "accuracy": 0.91,
+      "precision": 0.9294,
+      "recall": 0.91,
+      "f1": 0.917
+    },
+    "sla": {
+      "accuracy": 0.8833,
+      "precision": 0.8964,
+      "recall": 0.8833,
+      "f1": 0.8861
+    }
+  },
+  "routing_classes": [
+    "L1-General",
+    "L1-Hardware",
+    "L2-Application",
+    "L2-Network",
+    "L3-Database",
+    "Security"
+  ]
+}

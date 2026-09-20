@@ -8,3 +8,5 @@ logs
 tests
 screenshots
 *.md
+*.db
+data/*.db

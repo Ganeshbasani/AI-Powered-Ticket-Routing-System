@@ -26,7 +26,30 @@ CREATE TABLE IF NOT EXISTS audit_events (
     id INTEGER PRIMARY KEY, actor_email TEXT, action TEXT NOT NULL, resource_type TEXT NOT NULL,
     resource_id TEXT, created_at TEXT NOT NULL
 );
-"""), (2, "ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0;")]
+"""), (2, "ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0;"), (3, "ALTER TABLE tickets ADD COLUMN issue_type TEXT NOT NULL DEFAULT 'General';"), (4, """
+ALTER TABLE predictions ADD COLUMN sla_probability REAL;
+ALTER TABLE predictions ADD COLUMN routing_confidence REAL;
+ALTER TABLE predictions ADD COLUMN explanation TEXT;
+"""), (5, """
+ALTER TABLE tickets ADD COLUMN project TEXT NOT NULL DEFAULT 'General';
+ALTER TABLE tickets ADD COLUMN component TEXT NOT NULL DEFAULT 'General';
+ALTER TABLE tickets ADD COLUMN customer_tier TEXT NOT NULL DEFAULT 'Standard';
+ALTER TABLE tickets ADD COLUMN channel TEXT NOT NULL DEFAULT 'Portal';
+"""), (6, """
+CREATE TABLE IF NOT EXISTS feedback (
+    id INTEGER PRIMARY KEY,
+    ticket_id INTEGER NOT NULL REFERENCES tickets(id),
+    prediction_id INTEGER NOT NULL REFERENCES predictions(id),
+    actor_email TEXT NOT NULL,
+    decision TEXT NOT NULL CHECK(decision IN ('accept', 'override')),
+    corrected_team TEXT,
+    corrected_sla_risk TEXT CHECK(corrected_sla_risk IN ('High', 'Low')),
+    comment TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_ticket_id ON feedback(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_prediction_id ON feedback(prediction_id);
+""")]
 
 
 class Database:

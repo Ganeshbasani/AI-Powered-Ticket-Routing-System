@@ -58,7 +58,17 @@ class TicketService:
         ticket = self.repository.get_ticket(ticket_id)
         if not ticket:
             return None
-        prediction = self.model_service.predict(ticket["priority"], ticket["created_hours"])
+        prediction = self.model_service.predict(
+            summary=ticket["summary"],
+            description=ticket.get("description"),
+            priority=ticket["priority"],
+            created_hours=ticket["created_hours"],
+            issue_type=ticket.get("issue_type", "General"),
+            project=ticket.get("project", "General"),
+            component=ticket.get("component", "General"),
+            customer_tier=ticket.get("customer_tier", "Standard"),
+            channel=ticket.get("channel", "Portal"),
+        )
         return self.repository.add_prediction(ticket_id, prediction)
 
 
@@ -75,6 +85,6 @@ class MockJiraProvider:
         priority = priority.get("name") if isinstance(priority, dict) else priority
         return {
             "jira_issue_key": issue["key"], "summary": fields.get("summary"), "description": fields.get("description"),
-            "priority": priority, "created_hours": fields.get("created_hours"), "status": (fields.get("status") or {}).get("name", "open") if isinstance(fields.get("status"), dict) else "open",
+            "priority": priority, "issue_type": fields.get("issue_type", "General"), "project": fields.get("project", "General"), "component": fields.get("component", "General"), "customer_tier": fields.get("customer_tier", "Standard"), "channel": fields.get("channel", "Portal"), "created_hours": fields.get("created_hours"), "status": (fields.get("status") or {}).get("name", "open") if isinstance(fields.get("status"), dict) else "open",
             "source": "jira_mock",
         }

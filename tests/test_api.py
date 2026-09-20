@@ -35,12 +35,12 @@ def test_readiness_reports_missing_artifact_without_training(tmp_path):
 
 def test_predict_endpoint_success_matches_contract():
     response = create_app().test_client().post(
-        "/api/v1/predict", json={"priority": "High", "created_hours": 10}
+        "/api/v1/predict", json={"summary": "VPN connection keeps dropping", "description": "Network users cannot stay connected.", "priority": "High", "issue_type": "Network", "created_hours": 10}
     )
 
     payload = response.get_json()
     assert response.status_code == 200
-    assert set(payload) == {"assigned_team", "sla_breach_risk", "model_version", "request_id"}
+    assert {"assigned_team", "recommended_team", "sla_breach_risk", "sla_probability", "routing_confidence", "explanation", "model_version", "request_id"}.issubset(payload)
     assert payload["request_id"] == response.headers["X-Request-ID"]
 
 
@@ -48,11 +48,11 @@ def test_predict_endpoint_success_matches_contract():
     "payload",
     [
         {},
-        {"priority": "Critical", "created_hours": 2},
-        {"priority": "High", "created_hours": -1},
-        {"priority": "High", "created_hours": "NaN"},
-        {"priority": "High", "created_hours": True},
-        {"priority": "High", "created_hours": 1, "extra": "not accepted"},
+        {"summary": "Test", "priority": "Critical", "created_hours": 2},
+        {"summary": "Test", "priority": "High", "created_hours": -1},
+        {"summary": "Test", "priority": "High", "created_hours": "NaN"},
+        {"summary": "Test", "priority": "High", "created_hours": True},
+        {"summary": "Test", "priority": "High", "created_hours": 1, "extra": "not accepted"},
     ],
 )
 def test_predict_endpoint_rejects_invalid_payloads(payload):
@@ -71,14 +71,14 @@ def test_predict_endpoint_rejects_malformed_json():
 
 def test_unexpected_error_does_not_expose_internal_details():
     class FailingService:
-        def predict(self, priority: str, created_hours: float) -> dict:
+        def predict(self, **kwargs) -> dict:
             raise RuntimeError("internal artifact path: C:/private/model.joblib")
 
         def readiness(self) -> tuple[bool, str]:
             return False, "invalid"
 
     response = create_app(model_service=FailingService()).test_client().post(
-        "/api/v1/predict", json={"priority": "High", "created_hours": 1}
+        "/api/v1/predict", json={"summary": "VPN issue", "priority": "High", "created_hours": 1}
     )
 
     _assert_error(response, "internal_error", 500)
