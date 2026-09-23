@@ -2,7 +2,7 @@
 
 # 🎫 AI-Powered Ticket Routing & SLA Breach Prediction
 
-<p align="center">
+<p align="center"> 
   <img src="https://readme-typing-svg.demolab.com?font=Poppins&weight=600&size=28&duration=3000&pause=1000&color=00C2FF&center=true&vCenter=true&width=900&lines=AI-Powered+Ticket+Routing;SLA+Breach+Prediction;Machine+Learning+%2B+Flask+REST+API;Python+%7C+Scikit-Learn+%7C+TF-IDF+%2B+Logistic+Regression" alt="Typing Animation"/>
 </p>
 
