@@ -23,6 +23,8 @@ __pycache__/
 logs/
 *.log
 *.db
+data/synthetic/
+ml_model/candidates/
 
 # OS
 .DS_Store
@@ -32,3 +34,9 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+
+# Local backups - never upload
+*.backup
+*.bak
+*.container-backup
+*-backup*.db

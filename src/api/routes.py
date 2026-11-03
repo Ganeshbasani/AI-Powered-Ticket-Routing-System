@@ -57,16 +57,9 @@ def require_roles(*roles: str) -> Callable:
                 claims = _extensions("token_service").verify(header[7:])
             except AuthenticationError as error:
                 raise APIError(str(error), 401, "authentication_failed") from error
-            # The role in the signed token is authoritative for this session.
-            # The database is still checked for account existence and disabled status.
-            token_role = claims.get("role")
-            if token_role not in roles:
-                raise APIError("You do not have permission for this action.", 403, "forbidden")
-
             user = _extensions("ticket_repository").get_user_by_id(claims["id"])
-            if not user or user.get("disabled"):
+            if not user or user.get("disabled") or user["role"] not in roles:
                 raise APIError("You do not have permission for this action.", 403, "forbidden")
-
             g.current_user = user
             return view(*args, **kwargs)
         return wrapped
@@ -87,21 +80,11 @@ def readiness():
 @api_blueprint.post("/predict")
 def predict():
     payload = _payload()
-    unknown = set(payload) - {"summary", "description", "priority", "created_hours", "issue_type", "project", "component", "customer_tier", "channel"}
+    unknown = set(payload) - {"priority", "created_hours"}
     if unknown:
         raise APIError(f"Unknown field(s): {', '.join(sorted(unknown))}.")
-    fields = _ticket_fields(payload)
-    prediction = _extensions("model_service").predict(
-        summary=fields["summary"],
-        description=fields.get("description"),
-        priority=fields["priority"],
-        created_hours=fields["created_hours"],
-        issue_type=fields.get("issue_type", "General"),
-        project=fields.get("project", "General"),
-        component=fields.get("component", "General"),
-        customer_tier=fields.get("customer_tier", "Standard"),
-        channel=fields.get("channel", "Portal"),
-    )
+    fields = _ticket_fields({**payload, "summary": "direct prediction"})
+    prediction = _extensions("model_service").predict(fields["priority"], fields["created_hours"])
     return {**prediction, "request_id": g.request_id}, 200
 
 
@@ -187,7 +170,7 @@ def get_ticket(ticket_id: int):
 @require_roles("admin", "support_agent")
 def update_ticket(ticket_id: int):
     payload = _payload()
-    allowed = {"summary", "description", "priority", "issue_type", "project", "component", "customer_tier", "channel", "created_hours", "assigned_team", "status"}
+    allowed = {"summary", "description", "priority", "created_hours", "assigned_team", "status"}
     if not payload or set(payload) - allowed:
         raise APIError("Only supported ticket fields may be updated.")
     current = _extensions("ticket_repository").get_ticket(ticket_id)
@@ -222,53 +205,26 @@ def prediction_history(ticket_id: int):
     return {"predictions": _extensions("ticket_repository").predictions_for_ticket(ticket_id), "request_id": g.request_id}, 200
 
 
-@api_blueprint.post("/tickets/<int:ticket_id>/feedback")
+@api_blueprint.post("/tickets/<int:ticket_id>/predictions/<int:prediction_id>/decision")
 @require_roles("admin", "support_agent")
-def ticket_feedback(ticket_id: int):
-    payload = _payload()
-    allowed = {"prediction_id", "decision", "corrected_team", "corrected_sla_risk", "comment"}
-    if set(payload) - allowed or "prediction_id" not in payload or "decision" not in payload:
-        raise APIError("prediction_id and decision are required; only feedback fields are allowed.")
+def decide_prediction(ticket_id: int, prediction_id: int):
+    payload = _payload(); decision = payload.get("decision"); selected_team = payload.get("selected_team"); reason = payload.get("reason")
+    if decision not in {"accepted", "overridden"}:
+        raise APIError("decision must be accepted or overridden.")
+    if selected_team is not None and (not isinstance(selected_team, str) or not selected_team.strip()):
+        raise APIError("selected_team must be a non-empty string when supplied.")
+    if reason is not None and (not isinstance(reason, str) or not reason.strip()):
+        raise APIError("reason must be a non-empty string when supplied.")
+    if decision == "overridden" and (not selected_team or not reason):
+        raise APIError("Overrides require selected_team and reason.")
     try:
-        prediction_id = int(payload["prediction_id"])
-    except (TypeError, ValueError) as error:
-        raise APIError("prediction_id must be an integer.") from error
-    decision = payload.get("decision")
-    if decision not in {"accept", "override"}:
-        raise APIError("decision must be accept or override.")
-    corrected_team = payload.get("corrected_team")
-    if corrected_team is not None and (not isinstance(corrected_team, str) or not corrected_team.strip()):
-        raise APIError("corrected_team must be a non-empty string when provided.")
-    corrected_sla_risk = payload.get("corrected_sla_risk")
-    if corrected_sla_risk is not None and corrected_sla_risk not in {"High", "Low"}:
-        raise APIError("corrected_sla_risk must be High or Low.")
-    comment = payload.get("comment")
-    if comment is not None and (not isinstance(comment, str) or len(comment) > 1000):
-        raise APIError("comment must be text with at most 1000 characters.")
-    repository = _extensions("ticket_repository")
-    if not repository.get_ticket(ticket_id):
-        raise APIError("Ticket not found.", 404, "not_found")
-    try:
-        feedback = repository.add_feedback(
-            ticket_id=ticket_id, prediction_id=prediction_id, actor_email=g.current_user["email"],
-            decision=decision, corrected_team=corrected_team.strip() if isinstance(corrected_team, str) else None,
-            corrected_sla_risk=corrected_sla_risk, comment=comment.strip() if isinstance(comment, str) else None,
-        )
-    except KeyError as error:
-        raise APIError(str(error), 404, "not_found") from error
+        feedback = _extensions("ticket_repository").record_prediction_feedback(ticket_id, prediction_id, decision, selected_team, reason, g.current_user["email"])
     except ValueError as error:
-        raise APIError(str(error)) from error
-    repository.audit(g.current_user["email"], f"ticket_feedback_{decision}", "ticket", str(ticket_id))
-    return {"feedback": feedback, "ticket": repository.get_ticket(ticket_id), "request_id": g.request_id}, 201
-
-
-@api_blueprint.get("/tickets/<int:ticket_id>/feedback")
-@require_roles("admin", "analyst", "support_agent")
-def feedback_history(ticket_id: int):
-    repository = _extensions("ticket_repository")
-    if not repository.get_ticket(ticket_id):
-        raise APIError("Ticket not found.", 404, "not_found")
-    return {"feedback": repository.feedback_for_ticket(ticket_id), "request_id": g.request_id}, 200
+        raise APIError(str(error), 409, "decision_already_recorded") from error
+    if not feedback:
+        raise APIError("Prediction not found for this ticket.", 404, "not_found")
+    _extensions("ticket_repository").audit(g.current_user["email"], f"prediction_{decision}", "prediction", str(prediction_id))
+    return {"feedback": feedback, "request_id": g.request_id}, 201
 
 
 @api_blueprint.post("/integrations/jira/import")
@@ -282,4 +238,3 @@ def import_mock_jira_ticket():
     ticket = _extensions("ticket_repository").upsert_ticket(ticket_fields)
     _extensions("ticket_repository").audit(g.current_user["email"], "jira_mock_import", "ticket", str(ticket["id"]))
     return {"ticket": ticket, "request_id": g.request_id}, 200
-

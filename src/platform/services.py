@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 from time import monotonic
+from uuid import uuid4
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import check_password_hash
 
 from src.ml.model import ModelService
 from src.persistence.repository import TicketRepository
+from src.data.provenance import RecordOrigin
+from src.data.snapshots import PredictionSnapshot
 
 ROLES = {"admin", "analyst", "support_agent"}
 
@@ -58,18 +61,20 @@ class TicketService:
         ticket = self.repository.get_ticket(ticket_id)
         if not ticket:
             return None
-        prediction = self.model_service.predict(
-            summary=ticket["summary"],
-            description=ticket.get("description"),
-            priority=ticket["priority"],
-            created_hours=ticket["created_hours"],
-            issue_type=ticket.get("issue_type", "General"),
-            project=ticket.get("project", "General"),
-            component=ticket.get("component", "General"),
-            customer_tier=ticket.get("customer_tier", "Standard"),
-            channel=ticket.get("channel", "Portal"),
+        prediction = self.model_service.predict(ticket["priority"], ticket["created_hours"])
+        stored_prediction = self.repository.add_prediction(ticket_id, prediction)
+        snapshot = PredictionSnapshot.create(
+            prediction_snapshot_id=str(uuid4()), ticket_id=str(ticket_id),
+            source_ticket_key=ticket.get("jira_issue_key") or f"platform-{ticket_id}",
+            source_ticket_version=ticket["updated_at"], scored_at=stored_prediction["predicted_at"],
+            feature_values={"priority": ticket["priority"], "created_hours": ticket["created_hours"]},
+            feature_schema_version="production-baseline-v1", model_version=prediction["model_version"],
+            model_artifact_sha256=self.model_service.artifact_sha256(), text_normalization_version=None,
+            source_event_ids={"platform_ticket_version": ticket["updated_at"]}, source_system="platform_sqlite",
+            record_origin=RecordOrigin.OBSERVED, synthetic=False,
         )
-        return self.repository.add_prediction(ticket_id, prediction)
+        self.repository.add_prediction_snapshot(stored_prediction["id"], snapshot)
+        return {**stored_prediction, "prediction_snapshot_id": snapshot.prediction_snapshot_id}
 
 
 class MockJiraProvider:
@@ -85,6 +90,6 @@ class MockJiraProvider:
         priority = priority.get("name") if isinstance(priority, dict) else priority
         return {
             "jira_issue_key": issue["key"], "summary": fields.get("summary"), "description": fields.get("description"),
-            "priority": priority, "issue_type": fields.get("issue_type", "General"), "project": fields.get("project", "General"), "component": fields.get("component", "General"), "customer_tier": fields.get("customer_tier", "Standard"), "channel": fields.get("channel", "Portal"), "created_hours": fields.get("created_hours"), "status": (fields.get("status") or {}).get("name", "open") if isinstance(fields.get("status"), dict) else "open",
+            "priority": priority, "created_hours": fields.get("created_hours"), "status": (fields.get("status") or {}).get("name", "open") if isinstance(fields.get("status"), dict) else "open",
             "source": "jira_mock",
         }

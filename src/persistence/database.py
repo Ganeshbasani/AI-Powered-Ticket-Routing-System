@@ -26,29 +26,21 @@ CREATE TABLE IF NOT EXISTS audit_events (
     id INTEGER PRIMARY KEY, actor_email TEXT, action TEXT NOT NULL, resource_type TEXT NOT NULL,
     resource_id TEXT, created_at TEXT NOT NULL
 );
-"""), (2, "ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0;"), (3, "ALTER TABLE tickets ADD COLUMN issue_type TEXT NOT NULL DEFAULT 'General';"), (4, """
-ALTER TABLE predictions ADD COLUMN sla_probability REAL;
-ALTER TABLE predictions ADD COLUMN routing_confidence REAL;
-ALTER TABLE predictions ADD COLUMN explanation TEXT;
-"""), (5, """
-ALTER TABLE tickets ADD COLUMN project TEXT NOT NULL DEFAULT 'General';
-ALTER TABLE tickets ADD COLUMN component TEXT NOT NULL DEFAULT 'General';
-ALTER TABLE tickets ADD COLUMN customer_tier TEXT NOT NULL DEFAULT 'Standard';
-ALTER TABLE tickets ADD COLUMN channel TEXT NOT NULL DEFAULT 'Portal';
-"""), (6, """
-CREATE TABLE IF NOT EXISTS feedback (
-    id INTEGER PRIMARY KEY,
-    ticket_id INTEGER NOT NULL REFERENCES tickets(id),
-    prediction_id INTEGER NOT NULL REFERENCES predictions(id),
-    actor_email TEXT NOT NULL,
-    decision TEXT NOT NULL CHECK(decision IN ('accept', 'override')),
-    corrected_team TEXT,
-    corrected_sla_risk TEXT CHECK(corrected_sla_risk IN ('High', 'Low')),
-    comment TEXT,
-    created_at TEXT NOT NULL
+"""), (2, "ALTER TABLE users ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0;"), (3, """
+CREATE TABLE IF NOT EXISTS prediction_snapshots (
+    prediction_snapshot_id TEXT PRIMARY KEY, prediction_id INTEGER NOT NULL UNIQUE REFERENCES predictions(id),
+    ticket_id INTEGER NOT NULL REFERENCES tickets(id), source_ticket_key TEXT NOT NULL,
+    source_ticket_version TEXT NOT NULL, scored_at TEXT NOT NULL, feature_snapshot_json TEXT NOT NULL,
+    feature_schema_version TEXT NOT NULL, model_version TEXT NOT NULL, model_artifact_sha256 TEXT NOT NULL,
+    text_normalization_version TEXT, source_event_ids TEXT NOT NULL, source_system TEXT NOT NULL,
+    record_origin TEXT NOT NULL CHECK(record_origin IN ('observed', 'synthetic')), synthetic INTEGER NOT NULL,
+    generator_version TEXT, rule_set_version TEXT, seed INTEGER
 );
-CREATE INDEX IF NOT EXISTS idx_feedback_ticket_id ON feedback(ticket_id);
-CREATE INDEX IF NOT EXISTS idx_feedback_prediction_id ON feedback(prediction_id);
+CREATE TABLE IF NOT EXISTS prediction_feedback (
+    id INTEGER PRIMARY KEY, prediction_id INTEGER NOT NULL UNIQUE REFERENCES predictions(id),
+    decision TEXT NOT NULL CHECK(decision IN ('accepted', 'overridden')), selected_team TEXT,
+    reason TEXT, actor_email TEXT NOT NULL, decided_at TEXT NOT NULL
+);
 """)]
 
 

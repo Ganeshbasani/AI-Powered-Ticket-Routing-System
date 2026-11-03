@@ -12,7 +12,8 @@ def _app(tmp_path):
     repository = app.extensions["ticket_repository"]
     admin = repository.create_user("admin@example.com", "password", "admin")
     agent = repository.create_user("agent@example.com", "password", "support_agent")
-    return app, {"admin": {"Authorization": f"Bearer {app.extensions['token_service'].issue(admin)}"}, "agent": {"Authorization": f"Bearer {app.extensions['token_service'].issue(agent)}"}}
+    analyst = repository.create_user("analyst@example.com", "password", "analyst")
+    return app, {"admin": {"Authorization": f"Bearer {app.extensions['token_service'].issue(admin)}"}, "agent": {"Authorization": f"Bearer {app.extensions['token_service'].issue(agent)}"}, "analyst": {"Authorization": f"Bearer {app.extensions['token_service'].issue(analyst)}"}}
 
 
 def test_ticket_prediction_history_and_rbac(tmp_path):
@@ -26,7 +27,14 @@ def test_ticket_prediction_history_and_rbac(tmp_path):
     assert updated.status_code == 200 and updated.get_json()["ticket"]["status"] == "In Progress"
     assert client.post(f"/api/v1/tickets/{ticket_id}/predict", headers=headers["agent"]).status_code == 201
     history = client.get(f"/api/v1/tickets/{ticket_id}/predictions", headers=headers["agent"])
-    assert len(history.get_json()["predictions"]) == 1
+    prediction = history.get_json()["predictions"][0]
+    assert prediction["prediction_snapshot_id"]
+    feedback = client.post(f"/api/v1/tickets/{ticket_id}/predictions/{prediction['id']}/decision", headers=headers["agent"], json={"decision": "overridden", "selected_team": "Network", "reason": "Known maintenance"})
+    assert feedback.status_code == 201
+    assert client.post(f"/api/v1/tickets/{ticket_id}/predictions/{prediction['id']}/decision", headers=headers["analyst"], json={"decision": "accepted"}).status_code == 403
+    assert client.post(f"/api/v1/tickets/{ticket_id}/predictions/{prediction['id']}/decision", headers=headers["agent"], json={"decision": "accepted"}).status_code == 409
+    analytics = client.get("/api/v1/analytics", headers=headers["admin"]).get_json()["analytics"]
+    assert analytics["overridden_predictions"] == 1
 
 
 def test_mock_jira_import_is_idempotent_and_admin_only(tmp_path):

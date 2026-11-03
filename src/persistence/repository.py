@@ -59,12 +59,12 @@ class TicketRepository:
             existing = None
             if ticket.get("jira_issue_key"):
                 existing = connection.execute("SELECT id FROM tickets WHERE jira_issue_key = ?", (ticket["jira_issue_key"],)).fetchone()
-            values = (ticket["summary"], ticket.get("description"), ticket["priority"], ticket.get("issue_type", "General"), ticket.get("project", "General"), ticket.get("component", "General"), ticket.get("customer_tier", "Standard"), ticket.get("channel", "Portal"), ticket["created_hours"], ticket.get("assigned_team"), ticket.get("status", "open"), ticket.get("source", "api"), ticket.get("actual_sla_breach"), now)
+            values = (ticket["summary"], ticket.get("description"), ticket["priority"], ticket["created_hours"], ticket.get("assigned_team"), ticket.get("status", "open"), ticket.get("source", "api"), ticket.get("actual_sla_breach"), now)
             if existing:
-                connection.execute("UPDATE tickets SET summary=?, description=?, priority=?, issue_type=?, project=?, component=?, customer_tier=?, channel=?, created_hours=?, assigned_team=?, status=?, source=?, actual_sla_breach=?, updated_at=? WHERE id=?", (*values, existing["id"]))
+                connection.execute("UPDATE tickets SET summary=?, description=?, priority=?, created_hours=?, assigned_team=?, status=?, source=?, actual_sla_breach=?, updated_at=? WHERE id=?", (*values, existing["id"]))
                 ticket_id = existing["id"]
             else:
-                cursor = connection.execute("INSERT INTO tickets(jira_issue_key, summary, description, priority, issue_type, project, component, customer_tier, channel, created_hours, assigned_team, status, source, actual_sla_breach, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (ticket.get("jira_issue_key"), *values, now))
+                cursor = connection.execute("INSERT INTO tickets(jira_issue_key, summary, description, priority, created_hours, assigned_team, status, source, actual_sla_breach, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (ticket.get("jira_issue_key"), *values, now))
                 ticket_id = cursor.lastrowid
             return self.get_ticket(ticket_id, connection)
 
@@ -76,7 +76,7 @@ class TicketRepository:
         return dict(row) if row else None
 
     def update_ticket(self, ticket_id: int, fields: dict[str, Any]) -> dict[str, Any] | None:
-        allowed = {"summary", "description", "priority", "issue_type", "project", "component", "customer_tier", "channel", "created_hours", "assigned_team", "status"}
+        allowed = {"summary", "description", "priority", "created_hours", "assigned_team", "status"}
         updates = {name: value for name, value in fields.items() if name in allowed}
         if not updates:
             return self.get_ticket(ticket_id)
@@ -110,63 +110,46 @@ class TicketRepository:
     def analytics(self) -> dict[str, Any]:
         with self.database.session() as connection:
             group = lambda field: {row[0] or "Unassigned": row[1] for row in connection.execute(f"SELECT {field}, COUNT(*) FROM tickets GROUP BY {field}")}
-            return {"total_tickets": connection.execute("SELECT COUNT(*) FROM tickets").fetchone()[0], "open_tickets": connection.execute("SELECT COUNT(*) FROM tickets WHERE lower(status) = 'open'").fetchone()[0], "by_priority": group("priority"), "by_status": group("status"), "by_team": group("assigned_team"), "prediction_count": connection.execute("SELECT COUNT(*) FROM predictions").fetchone()[0], "predicted_breaches": connection.execute("SELECT COUNT(*) FROM predictions WHERE predicted_risk = 'High'").fetchone()[0], "feedback_count": connection.execute("SELECT COUNT(*) FROM feedback").fetchone()[0], "override_count": connection.execute("SELECT COUNT(*) FROM feedback WHERE decision = 'override'").fetchone()[0], "accept_count": connection.execute("SELECT COUNT(*) FROM feedback WHERE decision = 'accept'").fetchone()[0]}
+            feedback = {row[0]: row[1] for row in connection.execute("SELECT decision, COUNT(*) FROM prediction_feedback GROUP BY decision")}
+            return {"total_tickets": connection.execute("SELECT COUNT(*) FROM tickets").fetchone()[0], "open_tickets": connection.execute("SELECT COUNT(*) FROM tickets WHERE lower(status) = 'open'").fetchone()[0], "by_priority": group("priority"), "by_status": group("status"), "by_team": group("assigned_team"), "prediction_count": connection.execute("SELECT COUNT(*) FROM predictions").fetchone()[0], "predicted_breaches": connection.execute("SELECT COUNT(*) FROM predictions WHERE predicted_risk = 'High'").fetchone()[0], "accepted_predictions": feedback.get("accepted", 0), "overridden_predictions": feedback.get("overridden", 0)}
 
-    def add_prediction(self, ticket_id: int, prediction: dict[str, Any]) -> dict[str, Any]:
+    def add_prediction(self, ticket_id: int, prediction: dict[str, str]) -> dict[str, Any]:
         with self.database.session() as connection:
-            cursor = connection.execute("INSERT INTO predictions(ticket_id, predicted_risk, recommended_team, model_version, feature_schema, sla_probability, routing_confidence, explanation, predicted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (ticket_id, prediction["sla_breach_risk"], prediction["assigned_team"], prediction["model_version"], json.dumps(prediction.get("feature_schema", [])), prediction.get("sla_probability"), prediction.get("routing_confidence"), json.dumps(prediction.get("explanation", [])), _now()))
+            cursor = connection.execute("INSERT INTO predictions(ticket_id, predicted_risk, recommended_team, model_version, feature_schema, predicted_at) VALUES (?, ?, ?, ?, ?, ?)", (ticket_id, prediction["sla_breach_risk"], prediction["assigned_team"], prediction["model_version"], json.dumps(["priority", "created_hours"]), _now()))
             row = connection.execute("SELECT * FROM predictions WHERE id = ?", (cursor.lastrowid,)).fetchone()
             return dict(row)
 
     def predictions_for_ticket(self, ticket_id: int) -> list[dict[str, Any]]:
         with self.database.session() as connection:
-            predictions = [dict(row) for row in connection.execute("SELECT * FROM predictions WHERE ticket_id = ? ORDER BY id DESC", (ticket_id,))]
-            feedback_rows = [dict(row) for row in connection.execute(
-                "SELECT f.*, p.recommended_team AS predicted_team, p.predicted_risk AS predicted_risk FROM feedback f JOIN predictions p ON p.id = f.prediction_id WHERE f.ticket_id = ? ORDER BY f.id DESC",
-                (ticket_id,),
-            )]
-            feedback_by_prediction: dict[int, list[dict[str, Any]]] = {}
-            for item in feedback_rows:
-                feedback_by_prediction.setdefault(item["prediction_id"], []).append(item)
-            for prediction in predictions:
-                raw_explanation = prediction.get("explanation")
-                try:
-                    prediction["explanation"] = json.loads(raw_explanation) if raw_explanation else []
-                except (TypeError, json.JSONDecodeError):
-                    prediction["explanation"] = []
-                prediction["feedback"] = feedback_by_prediction.get(prediction["id"], [])
-            return predictions
+            query = """SELECT predictions.*, prediction_snapshots.prediction_snapshot_id,
+                prediction_feedback.decision, prediction_feedback.selected_team,
+                prediction_feedback.reason, prediction_feedback.actor_email, prediction_feedback.decided_at
+                FROM predictions
+                LEFT JOIN prediction_snapshots ON prediction_snapshots.prediction_id = predictions.id
+                LEFT JOIN prediction_feedback ON prediction_feedback.prediction_id = predictions.id
+                WHERE predictions.ticket_id = ? ORDER BY predictions.id DESC"""
+            return [dict(row) for row in connection.execute(query, (ticket_id,))]
 
-    def add_feedback(
-        self, ticket_id: int, prediction_id: int, actor_email: str, decision: str,
-        corrected_team: str | None = None, corrected_sla_risk: str | None = None, comment: str | None = None,
-    ) -> dict[str, Any]:
-        if decision not in {"accept", "override"}:
-            raise ValueError("decision must be 'accept' or 'override'.")
-        if decision == "override" and not corrected_team:
-            raise ValueError("corrected_team is required when overriding a recommendation.")
-        if corrected_sla_risk is not None and corrected_sla_risk not in {"High", "Low"}:
-            raise ValueError("corrected_sla_risk must be High or Low.")
+    def add_prediction_snapshot(self, prediction_id: int, snapshot: Any) -> dict[str, Any]:
+        values = {name: getattr(snapshot, name) for name in snapshot.__dataclass_fields__}
+        values["prediction_id"] = prediction_id
+        values["record_origin"] = values["record_origin"].value
+        values["synthetic"] = int(values["synthetic"])
+        columns = ", ".join(values); placeholders = ", ".join("?" for _ in values)
         with self.database.session() as connection:
-            prediction = connection.execute("SELECT * FROM predictions WHERE id = ? AND ticket_id = ?", (prediction_id, ticket_id)).fetchone()
-            if not prediction:
-                raise KeyError("Prediction not found for this ticket.")
-            final_team = corrected_team if decision == "override" else prediction["recommended_team"]
-            now = _now()
-            connection.execute("UPDATE tickets SET assigned_team = ?, updated_at = ? WHERE id = ?", (final_team, now, ticket_id))
-            cursor = connection.execute(
-                "INSERT INTO feedback(ticket_id, prediction_id, actor_email, decision, corrected_team, corrected_sla_risk, comment, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (ticket_id, prediction_id, actor_email, decision, corrected_team, corrected_sla_risk, comment, now),
-            )
-            row = connection.execute("SELECT * FROM feedback WHERE id = ?", (cursor.lastrowid,)).fetchone()
+            connection.execute(f"INSERT INTO prediction_snapshots({columns}) VALUES ({placeholders})", tuple(values.values()))
+            row = connection.execute("SELECT * FROM prediction_snapshots WHERE prediction_snapshot_id = ?", (snapshot.prediction_snapshot_id,)).fetchone()
             return dict(row)
 
-    def feedback_for_ticket(self, ticket_id: int) -> list[dict[str, Any]]:
+    def record_prediction_feedback(self, ticket_id: int, prediction_id: int, decision: str, selected_team: str | None, reason: str | None, actor_email: str) -> dict[str, Any] | None:
         with self.database.session() as connection:
-            return [dict(row) for row in connection.execute(
-                "SELECT f.*, p.recommended_team AS predicted_team, p.predicted_risk AS predicted_risk, p.routing_confidence FROM feedback f JOIN predictions p ON p.id = f.prediction_id WHERE f.ticket_id = ? ORDER BY f.id DESC",
-                (ticket_id,),
-            )]
+            exists = connection.execute("SELECT 1 FROM predictions WHERE id = ? AND ticket_id = ?", (prediction_id, ticket_id)).fetchone()
+            if not exists:
+                return None
+            if connection.execute("SELECT 1 FROM prediction_feedback WHERE prediction_id = ?", (prediction_id,)).fetchone():
+                raise ValueError("A decision has already been recorded for this prediction.")
+            cursor = connection.execute("INSERT INTO prediction_feedback(prediction_id, decision, selected_team, reason, actor_email, decided_at) VALUES (?, ?, ?, ?, ?, ?)", (prediction_id, decision, selected_team, reason, actor_email, _now()))
+            return dict(connection.execute("SELECT * FROM prediction_feedback WHERE id = ?", (cursor.lastrowid,)).fetchone())
 
     def audit(self, actor_email: str | None, action: str, resource_type: str, resource_id: str | None) -> None:
         with self.database.session() as connection:

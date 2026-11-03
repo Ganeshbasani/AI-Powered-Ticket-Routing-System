@@ -15,3 +15,11 @@ ticket prediction/history, and `POST /api/v1/integrations/jira/import`. The
 JIRA endpoint accepts a local Jira-shaped `issue` payload and uses `key` as the
 idempotency key. It does not contact a live JIRA instance. Live JIRA credentials
 in `.env.example` are placeholders for a future provider implementation.
+
+Ticket-scoped baseline predictions also create an immutable feature snapshot
+with scored values, baseline artifact hash, ticket version, and platform source
+reference. `POST /tickets/{ticket_id}/predictions/{prediction_id}/decision`
+lets administrators and support agents accept or override a stored
+recommendation. Overrides require a replacement team and reason; original
+prediction and snapshot evidence remain unchanged. Analytics reports accepted
+and overridden decision counts separately from predicted risk.

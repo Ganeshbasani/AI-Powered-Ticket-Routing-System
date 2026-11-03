@@ -1,11 +1,11 @@
-"""Flask application factory for the SLA prediction API."""
+﻿"""Flask application factory for the SLA prediction API."""
 
 from __future__ import annotations
 
 import uuid
 from pathlib import Path
 
-from flask import Flask, Response, g, jsonify, request
+from flask import Flask, Response, g, jsonify, request, send_from_directory
 
 from src.api.errors import APIError
 from src.api.routes import api_blueprint
@@ -24,17 +24,14 @@ def create_app(
     rate_limiter: InMemoryRateLimiter | None = None,
     rate_limits: dict[str, int] | None = None,
 ) -> Flask:
-    """Create the production Flask application."""
 
     logger = configure_logging(settings.log_level)
 
-    frontend_directory = Path(__file__).resolve().parents[2] / "frontend" / "dist"
-
-    app = Flask(
-        __name__,
-        static_folder=str(frontend_directory),
-        static_url_path="",
+    frontend_directory = (
+        Path(__file__).resolve().parents[2] / "frontend" / "dist"
     )
+
+    app = Flask(__name__)
 
     app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
 
@@ -44,18 +41,20 @@ def create_app(
     database.initialize()
 
     repository = TicketRepository(database)
-    app.extensions["ticket_repository"] = repository
 
+    app.extensions["ticket_repository"] = repository
     app.extensions["ticket_service"] = TicketService(
         repository,
         app.extensions["model_service"],
     )
 
-    app.extensions["token_service"] = token_service or TokenService(
-        settings.auth_secret_key
+    app.extensions["token_service"] = (
+        token_service or TokenService(settings.auth_secret_key)
     )
 
-    app.extensions["rate_limiter"] = rate_limiter or InMemoryRateLimiter()
+    app.extensions["rate_limiter"] = (
+        rate_limiter or InMemoryRateLimiter()
+    )
 
     app.config["RATE_LIMITS"] = rate_limits or {
         "login": settings.login_rate_limit,
@@ -63,24 +62,35 @@ def create_app(
         "jira_import": settings.jira_import_rate_limit,
     }
 
-    app.register_blueprint(api_blueprint, url_prefix="/api/v1")
+    app.register_blueprint(
+        api_blueprint,
+        url_prefix="/api/v1",
+    )
 
     @app.get("/")
     def frontend() -> Response:
-        return app.send_static_file("index.html")
+        return send_from_directory(
+            frontend_directory,
+            "index.html",
+        )
 
-    @app.get("/<path:filename>")
-    def frontend_static(filename: str) -> Response:
-        """Serve frontend assets and fall back to index.html for SPA routes."""
-        normalized = filename.lstrip("/")
-        requested = frontend_directory / normalized
-        if requested.is_file():
-            return app.send_static_file(normalized)
-        if normalized == "favicon.ico":
-            return Response(status=204)
-        if Path(normalized).suffix:
-            return jsonify({"error":{"code":"not_found","message":"Frontend resource not found.","request_id":g.request_id}}), 404
-        return app.send_static_file("index.html")
+    @app.get("/app.js")
+    def frontend_js() -> Response:
+        return send_from_directory(
+            frontend_directory,
+            "app.js",
+        )
+
+    @app.get("/style.css")
+    def frontend_css() -> Response:
+        return send_from_directory(
+            frontend_directory,
+            "style.css",
+        )
+
+    @app.get("/favicon.ico")
+    def favicon() -> Response:
+        return Response(status=204)
 
     app.logger.handlers = logger.handlers
     app.logger.setLevel(logger.level)
@@ -118,7 +128,10 @@ def create_app(
         return response
 
     @app.errorhandler(APIError)
-    def handle_api_error(error: APIError) -> tuple[Response, int]:
+    def handle_api_error(
+        error: APIError,
+    ) -> tuple[Response, int]:
+
         app.logger.warning(
             error.code,
             extra={"request_id": g.request_id},
@@ -137,23 +150,11 @@ def create_app(
             error.status_code,
         )
 
-    @app.errorhandler(404)
-    def handle_not_found(error: Exception) -> tuple[Response, int]:
-        return (
-            jsonify(
-                {
-                    "error": {
-                        "code": "not_found",
-                        "message": "The requested resource was not found.",
-                        "request_id": g.request_id,
-                    }
-                }
-            ),
-            404,
-        )
-
     @app.errorhandler(413)
-    def handle_request_too_large(error: Exception) -> tuple[Response, int]:
+    def handle_request_too_large(
+        error: Exception,
+    ) -> tuple[Response, int]:
+
         return (
             jsonify(
                 {
@@ -168,7 +169,10 @@ def create_app(
         )
 
     @app.errorhandler(Exception)
-    def handle_unexpected_error(error: Exception) -> tuple[Response, int]:
+    def handle_unexpected_error(
+        error: Exception,
+    ) -> tuple[Response, int]:
+
         app.logger.exception(
             "unexpected_error",
             extra={"request_id": g.request_id},
