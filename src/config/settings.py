@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Mapping
 
 from dotenv import load_dotenv
@@ -32,11 +32,28 @@ def _parse_bool(value: str, name: str) -> bool:
 
 def _workspace_path(value: str, name: str, base_dir: Path) -> Path:
     candidate = Path(value)
-    resolved = (base_dir / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
+    windows_candidate = PureWindowsPath(value)
+
+    # On Linux, pathlib does not recognize Windows drive and UNC paths
+    # as absolute paths. Reject them rather than treating them as relative.
+    if windows_candidate.is_absolute() and not candidate.is_absolute():
+        raise ConfigurationError(
+            f"{name} must be located inside the application directory."
+        )
+
+    resolved = (
+        (base_dir / candidate).resolve()
+        if not candidate.is_absolute()
+        else candidate.resolve()
+    )
+
     try:
         resolved.relative_to(base_dir.resolve())
     except ValueError as error:
-        raise ConfigurationError(f"{name} must be located inside the application directory.") from error
+        raise ConfigurationError(
+            f"{name} must be located inside the application directory."
+        ) from error
+
     return resolved
 
 
