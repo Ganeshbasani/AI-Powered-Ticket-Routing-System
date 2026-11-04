@@ -227,6 +227,129 @@ def decide_prediction(ticket_id: int, prediction_id: int):
     return {"feedback": feedback, "request_id": g.request_id}, 201
 
 
+
+@api_blueprint.post("/tickets/<int:ticket_id>/feedback")
+@require_roles("admin", "support_agent")
+def submit_ticket_feedback(ticket_id: int):
+    payload = _payload()
+    repository = _extensions("ticket_repository")
+
+    prediction_id = payload.get("prediction_id")
+    decision = payload.get("decision")
+    comment = payload.get("comment")
+    corrected_team = payload.get("corrected_team")
+
+    if type(prediction_id) is not int or prediction_id <= 0:
+        raise APIError("prediction_id must be a positive integer.")
+
+    if decision not in {"accept", "override"}:
+        raise APIError("decision must be accept or override.")
+
+    if comment is not None and (
+        not isinstance(comment, str) or not comment.strip()
+    ):
+        raise APIError("comment must be a non-empty string.")
+
+    if decision == "override" and (
+        not isinstance(corrected_team, str) or not corrected_team.strip()
+    ):
+        raise APIError("corrected_team is required for an override.")
+
+    if not repository.get_ticket(ticket_id):
+        raise APIError("Ticket not found.", 404, "not_found")
+
+    predictions = repository.predictions_for_ticket(ticket_id)
+    prediction = next(
+        (p for p in predictions if p["id"] == prediction_id),
+        None,
+    )
+
+    if prediction is None:
+        raise APIError("Prediction not found.", 404, "not_found")
+
+    selected_team = (
+        prediction["recommended_team"]
+        if decision == "accept"
+        else corrected_team.strip()
+    )
+
+    stored_decision = "accepted" if decision == "accept" else "overridden"
+
+    try:
+        feedback = repository.record_prediction_feedback(
+            ticket_id,
+            prediction_id,
+            stored_decision,
+            selected_team,
+            comment.strip() if comment else None,
+            g.current_user["email"],
+        )
+    except ValueError as error:
+        raise APIError(str(error), 409, "decision_already_recorded") from error
+
+    if feedback is None:
+        raise APIError("Prediction not found.", 404, "not_found")
+
+    ticket = repository.update_ticket(
+        ticket_id, {"assigned_team": selected_team}
+    )
+
+    repository.audit(
+        g.current_user["email"],
+        f"ticket_feedback_{decision}",
+        "ticket",
+        str(ticket_id),
+    )
+
+    feedback["decision"] = decision
+    feedback["corrected_team"] = (
+        selected_team if decision == "override" else None
+    )
+
+    return {
+        "feedback": feedback,
+        "ticket": ticket,
+        "request_id": g.request_id,
+    }, 201
+
+
+@api_blueprint.get("/tickets/<int:ticket_id>/feedback")
+@require_roles("admin", "analyst", "support_agent")
+def get_ticket_feedback(ticket_id: int):
+    repository = _extensions("ticket_repository")
+
+    if not repository.get_ticket(ticket_id):
+        raise APIError("Ticket not found.", 404, "not_found")
+
+    history = repository.predictions_for_ticket(ticket_id)
+    feedback = []
+
+    for item in history:
+        if not item.get("decision"):
+            continue
+
+        decision = (
+            "accept" if item["decision"] == "accepted" else "override"
+        )
+
+        feedback.append({
+            "prediction_id": item["id"],
+            "decision": decision,
+            "corrected_team": (
+                item.get("selected_team")
+                if decision == "override" else None
+            ),
+            "comment": item.get("reason"),
+            "actor_email": item.get("actor_email"),
+            "decided_at": item.get("decided_at"),
+        })
+
+    return {
+        "feedback": feedback,
+        "request_id": g.request_id,
+    }, 200
+
+
 @api_blueprint.post("/integrations/jira/import")
 @require_roles("admin")
 def import_mock_jira_ticket():
