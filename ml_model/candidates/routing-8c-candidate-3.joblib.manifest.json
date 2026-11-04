@@ -1,0 +1,75 @@
+{
+  "artifact_sha256": "51f6ddc0fa350d46b6abc3a46e745a01841cbfb7ddea3801b042b8dfcf6c4416",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10"
+  },
+  "evaluation": {
+    "accuracy": 0.7055555555555556,
+    "class_support": {
+      "Identity": 58,
+      "Network": 57,
+      "Workplace": 65
+    },
+    "confusion_matrix": [
+      [
+        40,
+        10,
+        8
+      ],
+      [
+        4,
+        44,
+        9
+      ],
+      [
+        16,
+        6,
+        43
+      ]
+    ],
+    "data_origin": "synthetic",
+    "labels": [
+      "Identity",
+      "Network",
+      "Workplace"
+    ],
+    "macro_f1": 0.7060342846105557,
+    "per_class": {
+      "Identity": {
+        "f1": 0.6779661016949152,
+        "precision": 0.6666666666666666,
+        "recall": 0.6896551724137931
+      },
+      "Network": {
+        "f1": 0.7521367521367521,
+        "precision": 0.7333333333333333,
+        "recall": 0.7719298245614035
+      },
+      "Workplace": {
+        "f1": 0.688,
+        "precision": 0.7166666666666667,
+        "recall": 0.6615384615384615
+      }
+    },
+    "warning": "Synthetic evaluation is pipeline evidence, not production performance."
+  },
+  "feature_schema": [
+    "priority",
+    "issue_type",
+    "project",
+    "component",
+    "created_hours",
+    "combined_text"
+  ],
+  "feature_schema_version": "candidate-v1",
+  "generator_version": "8c-synthetic-2",
+  "kind": "routing",
+  "model_version": "8c-candidate-3",
+  "random_seed": 20260826,
+  "rule_set_version": "8c-latent-scenarios-1",
+  "target": "initial_triage_team",
+  "training_manifest_checksum": "ed37e71450cc200b438d3aecdc311761d061415da3ac4a90ae061fa5409c7dde",
+  "training_samples": 840,
+  "training_timestamp": "2026-09-26T16:26:08.943828+00:00"
+}
