@@ -1,422 +1,440 @@
 <div align="center">
 
-# 🎫 AI-Powered Ticket Routing & SLA Breach Prediction
+# 🎫 AI-Powered Ticket Routing
+### Intelligent Support Operations · SLA Risk Prediction · Flask REST API
 
-<p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Poppins&weight=600&size=28&duration=3000&pause=1000&color=00C2FF&center=true&vCenter=true&width=900&lines=AI-Powered+Ticket+Routing;SLA+Breach+Prediction;Machine+Learning+%2B+Flask+REST+API;Python+%7C+Scikit-Learn+%7C+Random+Forest" alt="Typing Animation"/>
+<p>
+  <a href="https://ai-powered-ticket-routing-system-1.onrender.com">
+    <img src="https://img.shields.io/badge/🚀_LIVE_DEMO-Open_Application-00C2A8?style=for-the-badge" alt="Live Demo"/>
+  </a>
+  <a href="https://github.com/Ganeshbasani/AI-Powered-Ticket-Routing">
+    <img src="https://img.shields.io/badge/GitHub-View_Repository-181717?style=for-the-badge&logo=github" alt="GitHub"/>
+  </a>
 </p>
 
-<p align="center">
+<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=24&duration=2800&pause=900&color=00C2FF&center=true&vCenter=true&width=900&lines=Route+support+tickets+smarter;Identify+potential+SLA+breaches;Explore+an+AI-assisted+support+workflow;Built+with+Python+%7C+Flask+%7C+Scikit-learn" alt="Animated project introduction"/>
 
-![Python](https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge&logo=python)
-![Flask](https://img.shields.io/badge/Flask-REST_API-black?style=for-the-badge&logo=flask)
-![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-ML-orange?style=for-the-badge&logo=scikitlearn)
-![Pandas](https://img.shields.io/badge/Pandas-Data_Processing-150458?style=for-the-badge&logo=pandas)
-![Joblib](https://img.shields.io/badge/Joblib-Model_Serialization-success?style=for-the-badge)
-
+<p>
+  <img src="https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Flask-REST_API-000000?style=flat-square&logo=flask&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Scikit--learn-Machine_Learning-F7931E?style=flat-square&logo=scikitlearn&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Pandas-Data_Processing-150458?style=flat-square&logo=pandas&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Pytest-Testing-0A9EDC?style=flat-square&logo=pytest&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Docker-Containerized-2496ED?style=flat-square&logo=docker&logoColor=white"/>
 </p>
 
-<p align="center">
-
-![GitHub stars](https://img.shields.io/github/stars/Ganeshbasani/AI-Powered-Ticket-Routing?style=social)
-![GitHub forks](https://img.shields.io/github/forks/Ganeshbasani/AI-Powered-Ticket-Routing?style=social)
-![GitHub last commit](https://img.shields.io/github/last-commit/Ganeshbasani/AI-Powered-Ticket-Routing)
-![License](https://img.shields.io/badge/License-MIT-green)
-
+<p>
+  <img src="https://img.shields.io/github/last-commit/Ganeshbasani/AI-Powered-Ticket-Routing?style=flat-square&label=Last%20commit"/>
+  <img src="https://img.shields.io/github/stars/Ganeshbasani/AI-Powered-Ticket-Routing?style=flat-square&label=Stars"/>
+  <img src="https://img.shields.io/github/forks/Ganeshbasani/AI-Powered-Ticket-Routing?style=flat-square&label=Forks"/>
+  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square"/>
 </p>
 
----
+**A machine-learning-assisted ticket management prototype that predicts SLA breach risk and provides a baseline team-routing recommendation through a Flask API.**
 
-### 🚀 Intelligent Ticket Routing using Machine Learning
-
-Predicts a prototype **SLA breach-risk label** and presents a transparent baseline team recommendation for tickets managed through a Flask REST API and product frontend.
+[Live Demo](https://ai-powered-ticket-routing-system-1.onrender.com) · [Source Code](https://github.com/Ganeshbasani/AI-Powered-Ticket-Routing)
 
 </div>
 
 ---
 
-## Production API Contract
+## ✨ What does it do?
 
-## Security and Administration
+Support teams handle tickets with different priorities, workloads, and response expectations. This project explores how a machine-learning-assisted workflow can help identify tickets that may need attention.
 
-Authentication uses expiring bearer tokens obtained from `POST /api/v1/auth/login`.
-Administrators manage users through the protected `/api/v1/users` endpoints;
-analysts have read-only ticket access, and support agents can create tickets and
-request predictions. Disabled accounts cannot log in or use existing tokens.
+The application combines a Flask REST API, a Random Forest classification workflow, and a ticket-management platform to demonstrate:
 
-Bootstrap the first administrator locally with `BOOTSTRAP_ADMIN_EMAIL` and
-`BOOTSTRAP_ADMIN_PASSWORD` set, then run `python -m src.cli bootstrap-admin`.
-The command refuses to overwrite an existing administrator. Login, prediction,
-and mock-JIRA import use configurable single-instance rate limits; requests are
-limited to 1 MB. See [security and operations](docs/security.md) for complete
-role, audit, header, and mock-JIRA guidance.
+- **SLA risk prediction** — returns a binary risk label for a ticket.
+- **Team recommendation** — provides a baseline routing recommendation.
+- **Ticket operations** — supports ticket creation and platform workflows.
+- **Role-based access** — separates administrator, analyst, and support-agent permissions.
+- **Operational visibility** — includes health/readiness endpoints and request IDs.
+- **Dataset assessment** — validates input data and highlights limitations before model evaluation.
 
-`GET /api/v1/health` reports process liveness. `GET /api/v1/ready` reports
-whether a valid model artifact is immediately available and returns `503` until
-it is. Every response has an `X-Request-ID` header and a matching `request_id`
-field. Invalid requests return a stable `validation_error` object; unexpected
-errors return a generic `internal_error` response without implementation details.
+> **Important:** This is a prototype, not a production-validated SLA prediction system. The bundled dataset contains only three sample records and is insufficient to establish model accuracy or real-world performance.
 
-`POST /api/v1/predict` accepts exactly `priority` and `created_hours`. The
-response includes the binary risk label, existing routing heuristic, model
-version, and request ID. It deliberately does not expose an uncalibrated model
-probability.
+## 🚀 Live Demo
 
-## Configuration, Docker, and CI
+<p align="center">
+  <a href="https://ai-powered-ticket-routing-system-1.onrender.com">
+    <img src="https://img.shields.io/badge/OPEN_LIVE_APPLICATION-00C2A8?style=for-the-badge&logo=render&logoColor=white" alt="Open live application"/>
+  </a>
+</p>
 
-Copy `.env.example` to `.env` for local overrides. `APP_ENV`, `FLASK_PORT`,
-`FLASK_DEBUG`, `LOG_LEVEL`, `MODEL_PATH`, and `DATA_PATH` are validated at
-startup. Model and data paths must stay inside the application directory.
+| Demo access | Details |
+|---|---|
+| Application | [Open live application](https://ai-powered-ticket-routing-system-1.onrender.com) |
+| Demo email | `recruiter.demo@ticketrouting.app` |
+| Account role | `admin` |
+| Password | Use the demo password configured for this account. It is not published in this README. |
 
-Run locally with `python app.py`; run checks with `python -m compileall -q src
-tests` and `python -m pytest -q`.
+The demo account was created for application review. Keep its password private and do not commit credentials, tokens, or production secrets to this repository.
 
-Build and run the production container with:
+**Suggested demo walkthrough**
+1. Open the live application.
+2. Sign in using the demo account credentials supplied by the project maintainer.
+3. Explore the ticket workflow and available dashboard features.
+4. Create a sample ticket and inspect the available prediction/routing workflow.
+5. Review the API and documentation sections below.
+
+## 🧩 Core capabilities
+
+| Area | Capability |
+|---|---|
+| Prediction | Binary SLA breach-risk label |
+| Routing | Baseline team recommendation |
+| API | Versioned Flask REST endpoints |
+| Authentication | Expiring bearer-token authentication |
+| Authorization | Admin, analyst, and support-agent roles |
+| User management | Protected administrator endpoints |
+| Readiness | Health and model-readiness checks |
+| Reliability | Request IDs and structured error responses |
+| Data quality | CSV, JSON, and SQLite ticket export validation |
+| ML foundation | Deterministic text preparation and TF-IDF baseline foundation |
+| Testing | Pytest test suite |
+| Deployment | Docker image and GitHub Actions CI |
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+    A[User / Support Agent] --> B[Ticket Management Application]
+    B --> C[Flask REST API]
+    C --> D[Authentication & Authorization]
+    C --> E[Input Validation]
+    E --> F[Prediction Workflow]
+    F --> G[Random Forest Model]
+    F --> H[Baseline Routing Logic]
+    G --> I[SLA Risk Label]
+    H --> J[Team Recommendation]
+    I --> K[API Response]
+    J --> K
+    K --> B
+```
+
+### Prediction workflow
+
+```mermaid
+flowchart LR
+    A[Ticket Input] --> B[Validate Features]
+    B --> C[Load Model Artifact]
+    C --> D[Random Forest Prediction]
+    D --> E[Binary SLA Risk Label]
+    B --> F[Baseline Routing Heuristic]
+    F --> G[Suggested Team]
+    E --> H[Structured API Response]
+    G --> H
+```
+
+## 🛠️ Technology stack
+
+| Layer | Technologies |
+|---|---|
+| Programming language | Python |
+| Backend | Flask |
+| Machine learning | Scikit-learn, Random Forest |
+| Data processing | Pandas |
+| Model serialization | Joblib |
+| API | REST, JSON |
+| Testing | Pytest |
+| Containerization | Docker |
+| CI | GitHub Actions |
+
+## 🔐 Authentication and roles
+
+The API uses expiring bearer tokens obtained through:
+
+`POST /api/v1/auth/login`
+
+| Role | Access |
+|---|---|
+| Admin | User administration and full administrative permissions |
+| Analyst | Read-only ticket access |
+| Support agent | Ticket creation and prediction requests |
+
+Disabled accounts cannot log in or use existing tokens. Administrator user-management operations are protected.
+
+For local development, bootstrap the first administrator using environment variables:
 
 ```bash
-docker build -t sla-ticket-routing .
-docker run --rm -p 5000:5000 --env-file .env sla-ticket-routing
+BOOTSTRAP_ADMIN_EMAIL=admin@example.com
+BOOTSTRAP_ADMIN_PASSWORD=change-this-password
+python -m src.cli bootstrap-admin
 ```
 
-The Docker image uses a non-root user and stdout JSON logging. GitHub Actions
-runs compilation and tests on pushes and pull requests.
+The bootstrap command refuses to overwrite an existing administrator. Never use example credentials as real deployment credentials.
 
-See [product workflows](docs/product.md), [platform API](docs/platform.md), and
-[security and operations](docs/security.md) for the implemented roles, ticket
-lifecycle, analytics, mock-JIRA boundary, and administrative endpoints.
-See [deployment readiness](docs/deployment.md) for the container, CI, AWS
-configuration boundary, artifact rollback, and non-promotion policy.
+## 🌐 API reference
 
-## Dataset Foundation
-
-The data layer now canonicalizes CSV, JSON, and SQLite ticket exports, validates
-them without silently dropping records, flags leakage-prone columns, and can
-produce reproducible Markdown profiles. See the [dataset contract](docs/dataset_contract.md)
-and the generated [prototype profile](docs/dataset_profile.md). This does not
-change the current model: the bundled three-record dataset remains insufficient
-for meaningful ML evaluation.
-
-The Phase 8B [NLP feature foundation](docs/nlp_pipeline.md) adds deterministic
-ticket-text preparation, leakage warnings, and a non-training TF-IDF baseline.
-Run `python -m src.cli assess-dataset data/tickets.csv` to see the honest
-SLA/routing readiness assessment; the bundled three-record prototype is **not
-ready** for meaningful SLA or routing ML.
-
-Phase 8C adds [architecture-only contracts](docs/phase8c_architecture_contract.md)
-for source profiles, provenance, immutable prediction snapshots, and leakage
-classification. Ticket-scoped baseline predictions retain immutable local
-platform snapshots and human accept/override feedback without changing the
-`/predict` contract. Production JIRA routing and SLA mappings remain deliberately
-unconfigured.
-
-The isolated [synthetic-data and candidate-model workflow](docs/synthetic_data_and_candidates.md)
-adds reproducible pipeline evidence and versioned non-production artifacts. Its
-metrics are explicitly synthetic-development results, never production claims.
-
----
-
-# 📌 Table of Contents
-
-- Overview
-- Features
-- Tech Stack
-- Project Architecture
-- Folder Structure
-- Installation
-- Running the Application
-- API Documentation
-- Example Request
-- Machine Learning Workflow
-- Running Tests
-- Future Improvements
-- License
-
----
-
-# 📖 Overview
-
-Managing support tickets efficiently is critical for reducing response times and maintaining Service Level Agreements (SLAs).
-
-This project demonstrates how Machine Learning can assist ticket management by predicting whether a ticket is likely to breach its SLA while also recommending the appropriate routing team.
-
-The project is implemented as a backend-focused prototype with a REST API built using Flask.
-
----
-
-# ✨ Features
-
-✅ Predict SLA Breach Risk
-
-✅ Intelligent Ticket Routing
-
-✅ REST API using Flask
-
-✅ Random Forest Machine Learning Model
-
-✅ Automatic Model Training
-
-✅ Health Check Endpoint
-
-✅ Clean Project Structure
-
-✅ Automated Unit Testing
-
----
-
-# 🛠 Tech Stack
-
-| Category | Technology |
-|-----------|------------|
-| Language | Python |
-| Backend | Flask |
-| Machine Learning | Scikit-Learn |
-| Data Processing | Pandas |
-| Model Storage | Joblib |
-| Testing | Pytest |
-
----
-
-# 🧠 Project Architecture
+Base URL:
 
 ```text
-                Ticket Data
-                     │
-                     ▼
-              Data Preprocessing
-                     │
-                     ▼
-          Random Forest Training
-                     │
-             Saved ML Model
-                     │
-                     ▼
-             Flask REST API
-                     │
-                     ▼
-        SLA Prediction + Team Routing
+http://127.0.0.1:5000
 ```
 
----
+### Health check
 
-# 📂 Project Structure
+```http
+GET /api/v1/health
+```
+
+Checks whether the application process is alive.
+
+### Readiness check
+
+```http
+GET /api/v1/ready
+```
+
+Checks whether a valid model artifact is immediately available. Returns `503` until the application is ready.
+
+### Login
+
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+```
+
+Obtain an expiring bearer token using the configured account credentials.
+
+### SLA prediction
+
+```http
+POST /api/v1/predict
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+Request body:
+
+```json
+{
+  "priority": "High",
+  "created_hours": 8
+}
+```
+
+The endpoint accepts exactly `priority` and `created_hours`.
+
+The response includes the binary SLA risk label, the existing routing heuristic result, model version, and request ID. It does not expose an uncalibrated model probability.
+
+> The response values depend on the running application and model artifact. Treat this JSON as an illustrative request, not a guaranteed prediction result.
+
+### API reliability and security
+
+- Every response includes an `X-Request-ID` header and matching `request_id` field.
+- Invalid input returns a stable `validation_error` structure.
+- Unexpected failures return a generic `internal_error` response.
+- Request bodies are limited to 1 MB.
+- Login, prediction, and mock-JIRA import have configurable single-instance rate limits.
+
+See [Security & Operations](docs/security.md) for the detailed implementation guidance.
+
+## 🧪 Machine-learning and data workflow
+
+The current prediction-time inputs are:
+
+- `priority`
+- `created_hours`
+
+The following fields are not prediction features:
+
+- `ticket_id`
+- `assigned_team`
+- `sla_breach`
+
+The project includes dataset canonicalization for CSV, JSON, and SQLite ticket exports, validation without silently dropping records, leakage-prone column warnings, and reproducible Markdown profiling.
+
+The NLP foundation adds deterministic ticket-text preparation, leakage warnings, and a non-training TF-IDF baseline.
+
+### Dataset limitation
+
+The bundled dataset has only three sample tickets. It is useful for exercising the pipeline, but it is **not sufficient for meaningful model evaluation, production accuracy claims, or reliable real-world SLA conclusions**.
+
+Synthetic-development metrics, where available, must not be interpreted as production performance. Production JIRA routing and SLA mappings remain unconfigured.
+
+Useful documentation:
+
+- [Dataset contract](docs/dataset_contract.md)
+- [Dataset profile](docs/dataset_profile.md)
+- [ML data audit](docs/ml_data_audit.md)
+- [NLP pipeline](docs/nlp_pipeline.md)
+- [Synthetic data and candidate models](docs/synthetic_data_and_candidates.md)
+
+## 📁 Project structure
 
 ```text
-AI-Powered-Ticket-Routing
-│
+AI-Powered-Ticket-Routing/
 ├── api/
-│
 ├── data/
 │   └── tickets.csv
-│
 ├── docs/
-│
+│   ├── dataset_contract.md
+│   ├── dataset_profile.md
+│   ├── deployment.md
+│   ├── ml_data_audit.md
+│   ├── nlp_pipeline.md
+│   ├── platform.md
+│   ├── product.md
+│   └── security.md
 ├── ml_model/
-│
 ├── src/
-│
 ├── tests/
-│
 ├── app.py
-│
 ├── requirements.txt
-│
 ├── requirements-dev.txt
-│
 └── README.md
 ```
 
----
+## ⚙️ Run locally
 
-# ⚙️ Installation
-
-## Clone Repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Ganeshbasani/AI-Powered-Ticket-Routing.git
-
 cd AI-Powered-Ticket-Routing
 ```
 
----
+### 2. Create a virtual environment
 
-## Create Virtual Environment
-
-### Windows
+**Windows**
 
 ```bash
 python -m venv venv
-
 venv\Scripts\activate
 ```
 
-### Linux / macOS
+**Linux / macOS**
 
 ```bash
 python3 -m venv venv
-
 source venv/bin/activate
 ```
 
----
-
-## Install Dependencies
+### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
-
-# ▶️ Run the Application
-
-```bash
-python app.py
-```
-
-Server starts at
-
-```
-http://127.0.0.1:5000
-```
-
----
-
-# 🌐 REST API
-
-## Health Check
-
-```
-GET /api/v1/health
-```
-
-Response
-
-```json
-{
-    "status":"ok"
-}
-```
-
----
-
-## Predict Ticket
-
-```
-POST /api/v1/predict
-```
-
-Example Request
-
-```json
-{
-    "priority":"High",
-    "created_hours":8
-}
-```
-
-Example Response
-
-```json
-{
-    "assigned_team":"L2",
-    "sla_breach_risk":"High"
-}
-```
-
----
-
-# 🤖 Machine Learning Workflow
-
-```text
-Load Dataset
-      │
-      ▼
-Feature Selection
-      │
-      ▼
-Train Random Forest
-      │
-      ▼
-Save Model
-      │
-      ▼
-Load Model
-      │
-      ▼
-Prediction API
-```
-
----
-
-# 🧪 Running Tests
-
-Install development dependencies
+For development and testing:
 
 ```bash
 pip install -r requirements-dev.txt
 ```
 
-Run tests
+### 4. Configure environment
+
+Copy `.env.example` to `.env` and configure the required local values.
+
+The application validates settings such as:
+
+- `APP_ENV`
+- `FLASK_PORT`
+- `FLASK_DEBUG`
+- `LOG_LEVEL`
+- `MODEL_PATH`
+- `DATA_PATH`
+
+Model and data paths must remain inside the application directory.
+
+### 5. Start the application
+
+```bash
+python app.py
+```
+
+Open:
+
+```text
+http://127.0.0.1:5000
+```
+
+## 🐳 Docker
+
+Build the production container:
+
+```bash
+docker build -t sla-ticket-routing .
+```
+
+Run it:
+
+```bash
+docker run --rm -p 5000:5000 --env-file .env sla-ticket-routing
+```
+
+The Docker image uses a non-root user and writes JSON logs to stdout.
+
+## ✅ Run tests
+
+Compile application and test modules:
+
+```bash
+python -m compileall -q src tests
+```
+
+Run the test suite:
 
 ```bash
 python -m pytest -q
 ```
 
----
+GitHub Actions runs compilation and tests on pushes and pull requests.
 
-# 📊 Current Capabilities
+## 📚 Further documentation
 
-✔ Automatic model training if no saved model exists
+| Document | Description |
+|---|---|
+| [Product workflows](docs/product.md) | Ticket lifecycle, roles, and product workflows |
+| [Platform API](docs/platform.md) | Platform endpoints and implementation |
+| [Security and operations](docs/security.md) | Authentication, roles, audit, and security |
+| [Deployment readiness](docs/deployment.md) | Container, CI, configuration, and artifact rollback |
+| [Dataset contract](docs/dataset_contract.md) | Dataset formats and validation rules |
+| [ML data audit](docs/ml_data_audit.md) | Features, target definition, and leakage review |
+| [NLP pipeline](docs/nlp_pipeline.md) | Text preparation and TF-IDF baseline foundation |
 
-✔ Predicts a binary SLA breach-risk label
+## 🗺️ Roadmap
 
-✔ Suggests target routing team
+- [ ] Evaluate using a representative, timestamped ticket dataset.
+- [ ] Establish meaningful model evaluation before making performance claims.
+- [ ] Add a live JIRA provider only after approved credentials and network integration are available.
+- [ ] Add browser-level interaction tests for the frontend.
+- [ ] Introduce shared rate-limit storage for multi-instance deployments.
+- [ ] Configure and validate production SLA mappings and routing integrations.
 
-✔ Uses Random Forest classifier
+## 👨‍💻 About the developer
 
-✔ RESTful API interface
+<div align="center">
 
-✔ Lightweight backend implementation
+### Basani Ganesh
 
-## Data and Model Limitations
+**B.Tech · Computer Science & Engineering · 2026**
 
-The bundled dataset contains only three sample tickets. It is enough to exercise
-the training and prediction flow, but not to measure model quality or claim
-production accuracy. The pipeline uses `priority` and `created_hours` as
-prediction-time inputs; `ticket_id`, `assigned_team`, and `sla_breach` are not
-features. See [the ML data and leakage audit](docs/ml_data_audit.md) for the
-target definition, validation rules, artifact design, and evaluation limits.
+Interested in Python development, backend engineering, cloud technologies, DevOps, and applied machine learning.
 
----
+<a href="https://github.com/Ganeshbasani">
+  <img src="https://img.shields.io/badge/GitHub-Ganeshbasani-181717?style=for-the-badge&logo=github" alt="GitHub profile"/>
+</a>
 
-# 🚀 Future Improvements
+</div>
 
-- Representative, timestamped ticket data before evaluating or expanding ML
-- Live JIRA provider only with approved credentials and network integration
-- Browser-level interaction tests for the dependency-free frontend
-- Production shared rate-limit storage for multi-instance deployments
+## 🤝 Contributing
 
----
+Suggestions, issues, and improvements are welcome. Please open an issue to discuss a proposed change before submitting a pull request.
 
-# 📜 License
+## 📄 License
 
-This project is licensed under the **MIT License**.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
 
-## 👨‍💻 Developer
+**If this project was useful or interesting, consider giving the repository a ⭐**
 
-### **Basani Ganesh**
+[🚀 Launch Live Demo](https://ai-powered-ticket-routing-system-1.onrender.com) · [💻 Explore Source Code](https://github.com/Ganeshbasani/AI-Powered-Ticket-Routing)
 
-🎓 B.Tech – Computer Science & Engineering
-
-💻 Passionate about Full Stack Development, AI & Machine Learning
-
-🔗 GitHub
-
-https://github.com/Ganeshbasani
-
+<sub>Built with Python, Flask, Scikit-learn, and a focus on transparent engineering.</sub>
 
 </div>
