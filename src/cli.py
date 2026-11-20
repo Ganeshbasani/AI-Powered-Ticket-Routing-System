@@ -13,6 +13,7 @@ from src.persistence.repository import TicketRepository
 from src.data.pipeline import assess_readiness, ingest, ingest_sqlite, profile_markdown, validate
 from src.data.synthetic import SIZE_PRESETS, write_synthetic_dataset
 from src.ml.candidates import train_candidate_models
+from src.platform.demo import setup_demo_account
 
 
 def bootstrap_admin(email: str | None = None, password: str | None = None, database: Database | None = None) -> str:
@@ -29,7 +30,7 @@ def bootstrap_admin(email: str | None = None, password: str | None = None, datab
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["bootstrap-admin", "validate-dataset", "profile-dataset", "assess-dataset", "generate-synthetic", "train-candidates"])
+    parser.add_argument("command", choices=["bootstrap-admin", "setup-demo", "ensure-admin", "validate-dataset", "profile-dataset", "assess-dataset", "generate-synthetic", "train-candidates"])
     parser.add_argument("path", nargs="?")
     parser.add_argument("--report", default="docs/dataset_profile.md")
     parser.add_argument("--size", choices=sorted(SIZE_PRESETS), default="medium")
@@ -38,6 +39,22 @@ def main() -> None:
     parser.add_argument("--artifacts", default="ml_model/candidates")
     args = parser.parse_args()
     if args.command == "bootstrap-admin": print(bootstrap_admin())
+    elif args.command == "setup-demo":
+        email, password = os.environ.get("DEMO_ADMIN_EMAIL"), os.environ.get("DEMO_ADMIN_PASSWORD")
+        if not email or not password: raise ValueError("DEMO_ADMIN_EMAIL and DEMO_ADMIN_PASSWORD are required.")
+        repository = TicketRepository(Database(settings.database_path)); repository.database.initialize()
+        user_id = setup_demo_account(repository, email, password)
+        print(json.dumps({"message": "Demo account and sample tickets are ready.", "user_id": user_id, "email": email}))
+    elif args.command == "ensure-admin":
+        demo_email, demo_password = os.environ.get("DEMO_ADMIN_EMAIL"), os.environ.get("DEMO_ADMIN_PASSWORD")
+        if demo_email and demo_password:
+            repository = TicketRepository(Database(settings.database_path)); repository.database.initialize()
+            user_id = setup_demo_account(repository, demo_email, demo_password)
+            print(json.dumps({"message": "Demo admin and tickets are ready.", "user_id": user_id, "email": demo_email}))
+        elif TicketRepository(Database(settings.database_path)).has_administrator():
+            print("Administrator already exists.")
+        else:
+            print(bootstrap_admin())
     elif args.command == "generate-synthetic":
         output = Path(args.path or f"data/synthetic/{args.size}.csv")
         manifest = Path(args.manifest or output.with_suffix(".manifest.json"))

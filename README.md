@@ -66,16 +66,18 @@ The application combines a Flask REST API, a Random Forest classification workfl
 | Application | [Open live application](https://ai-powered-ticket-routing-system-1.onrender.com) |
 | Demo email | `recruiter.demo@ticketrouting.app` |
 | Account role | `admin` |
-| Password | Use the demo password configured for this account. It is not published in this README. |
+| Password | Supplied privately by the project maintainer. |
 
 The demo account was created for application review. Keep its password private and do not commit credentials, tokens, or production secrets to this repository.
 
 **Suggested demo walkthrough**
 1. Open the live application.
 2. Sign in using the demo account credentials supplied by the project maintainer.
-3. Explore the ticket workflow and available dashboard features.
-4. Create a sample ticket and inspect the available prediction/routing workflow.
-5. Review the API and documentation sections below.
+3. Explore the dashboard, tickets, analytics, user administration, and ML lab.
+4. Open a ticket, request an SLA prediction, then accept or override its routing recommendation.
+5. Create a ticket or import a mock JIRA issue to explore the workflow end to end.
+
+For a local recruiter demo, set `DEMO_ADMIN_EMAIL` and `DEMO_ADMIN_PASSWORD` in `.env`, then start the app. On startup it creates the admin account once and seeds eight editable `DEMO-*` tickets. The user password is hashed in SQLite. The demo email and password must also be configured as Render environment variables for the hosted demo; the password is intentionally not committed to the repository.
 
 ## 🧩 Core capabilities
 
@@ -90,7 +92,7 @@ The demo account was created for application review. Keep its password private a
 | Readiness | Health and model-readiness checks |
 | Reliability | Request IDs and structured error responses |
 | Data quality | CSV, JSON, and SQLite ticket export validation |
-| ML foundation | Deterministic text preparation and TF-IDF baseline foundation |
+| ML foundation | Random Forest SLA baseline plus isolated TF-IDF routing/SLA candidate workflows |
 | Testing | Pytest test suite |
 | Deployment | Docker image and GitHub Actions CI |
 
@@ -246,6 +248,8 @@ The following fields are not prediction features:
 The project includes dataset canonicalization for CSV, JSON, and SQLite ticket exports, validation without silently dropping records, leakage-prone column warnings, and reproducible Markdown profiling.
 
 The NLP foundation adds deterministic ticket-text preparation, leakage warnings, and a non-training TF-IDF baseline.
+
+The authenticated **ML lab** in the application explains the production baseline and provides reproducible commands for structured-plus-TF-IDF routing and SLA candidates. Candidates use chronological evaluation and save metrics and provenance alongside their artifacts. Synthetic results are explicitly development evidence and are not presented as production accuracy.
 
 ### Dataset limitation
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+import os
 from pathlib import Path
 
 from flask import Flask, Response, g, jsonify, request, send_from_directory
@@ -15,6 +16,7 @@ from src.ml.model import ModelService
 from src.persistence.database import Database
 from src.persistence.repository import TicketRepository
 from src.platform.services import InMemoryRateLimiter, TicketService, TokenService
+from src.platform.demo import setup_demo_account
 
 
 def create_app(
@@ -41,6 +43,13 @@ def create_app(
     database.initialize()
 
     repository = TicketRepository(database)
+
+    demo_email = os.environ.get("DEMO_ADMIN_EMAIL", "").strip()
+    demo_password = os.environ.get("DEMO_ADMIN_PASSWORD", "")
+    if bool(demo_email) != bool(demo_password):
+        raise RuntimeError("Set both DEMO_ADMIN_EMAIL and DEMO_ADMIN_PASSWORD to enable demo setup.")
+    if demo_email and demo_password:
+        setup_demo_account(repository, demo_email, demo_password)
 
     app.extensions["ticket_repository"] = repository
     app.extensions["ticket_service"] = TicketService(

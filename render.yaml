@@ -18,5 +18,9 @@
         value: "10000"
       - key: AUTH_SECRET_KEY
         generateValue: true
+      - key: DEMO_ADMIN_EMAIL
+        value: recruiter.demo@ticketrouting.app
+      - key: DEMO_ADMIN_PASSWORD
+        sync: false
       - key: LOG_LEVEL
         value: INFO

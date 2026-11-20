@@ -31,4 +31,4 @@ EXPOSE 10000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD python -c "import os; from urllib.request import urlopen; urlopen('http://127.0.0.1:' + os.environ.get('PORT', '10000') + '/api/v1/health', timeout=5)"
 
-CMD ["sh", "-c", "python -m src.cli bootstrap-admin && exec gunicorn --bind 0.0.0.0:${PORT:-10000} --workers 1 --worker-class gthread --threads 2 --timeout 120 wsgi:app"]
+CMD ["sh", "-c", "python -m src.cli ensure-admin && exec gunicorn --bind 0.0.0.0:${PORT:-10000} --workers 1 --worker-class gthread --threads 2 --timeout 120 wsgi:app"]
