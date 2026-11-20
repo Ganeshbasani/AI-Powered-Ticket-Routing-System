@@ -797,7 +797,7 @@ Configure the following values in `.env`:
 
 ```dotenv
 DEMO_ADMIN_EMAIL=demo.admin@ticketroute.local
-DEMO_ADMIN_PASSWORD=your-own-strong-password
+DEMO_ADMIN_PASSWORD=RouteDemo!2026
 ```
 
 Run:
