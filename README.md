@@ -1,4 +1,4 @@
- <div align="center">
+<div align="center">
 
 # 🎫 AI-Powered Ticket Routing & SLA Breach Prediction System
 
@@ -12,36 +12,60 @@
     <img src="https://img.shields.io/badge/GitHub-Source_Code-181717?style=for-the-badge&logo=github" alt="GitHub"/>
   </a>
 </p>
-</div>
-Explore the application without creating an account.
-Details	Demo Access
-Application	[Open Live Application](https://ai-powered-ticket-routing-system-1.onrender.com/)
-Demo Email	demo.admin@ticketroute.local
-Demo Password	RouteDemo!20261
-Access Role	Administrator
-Note: This is a public demonstration account. Do not use it for sensitive information or real organizational data.
+
 <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=23&duration=2500&pause=800&color=00C2FF&center=true&vCenter=true&width=950&lines=Intelligent+Ticket+Management;AI-Assisted+Support+Team+Recommendations;Dynamic+SLA+Breach+Monitoring;Predictive+Risk+Assessment;Built+with+Python+%7C+Flask+%7C+Machine+Learning" alt="Animated project introduction"/>
 
 <p>
-  <img src="https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
-  <img src="https://img.shields.io/badge/Flask-REST_API-000000?style=for-the-badge&logo=flask"/>
-  <img src="https://img.shields.io/badge/Scikit--learn-ML-F7931E?style=for-the-badge&logo=scikitlearn"/>
-  <img src="https://img.shields.io/badge/Pandas-Data_Processing-150458?style=for-the-badge&logo=pandas"/>
-  <img src="https://img.shields.io/badge/Docker-Containerization-2496ED?style=for-the-badge&logo=docker"/>
+  <img src="https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
+  <img src="https://img.shields.io/badge/Flask-REST_API-000000?style=for-the-badge&logo=flask" alt="Flask"/>
+  <img src="https://img.shields.io/badge/Scikit--learn-ML-F7931E?style=for-the-badge&logo=scikitlearn" alt="Scikit-learn"/>
+  <img src="https://img.shields.io/badge/Pandas-Data_Processing-150458?style=for-the-badge&logo=pandas" alt="Pandas"/>
+  <img src="https://img.shields.io/badge/Docker-Containerization-2496ED?style=for-the-badge&logo=docker" alt="Docker"/>
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Automated_Tests-70_Passed-success?style=flat-square"/>
-  <img src="https://img.shields.io/badge/Frontend-Build_Verified-success?style=flat-square"/>
-  <img src="https://img.shields.io/badge/Deployment-Render-46E3B7?style=flat-square&logo=render"/>
-  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Automated_Tests-70_Passed-success?style=flat-square" alt="Automated tests"/>
+  <img src="https://img.shields.io/badge/Frontend-Build_Verified-success?style=flat-square" alt="Frontend build"/>
+  <img src="https://img.shields.io/badge/Deployment-Render-46E3B7?style=flat-square&logo=render" alt="Render"/>
+  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License"/>
 </p>
 
 **An AI-assisted IT service management platform that simplifies ticket operations, recommends support teams, monitors SLA deadlines, and provides transparent risk assessments.**
 
-[🌐 Live Application](https://ai-powered-ticket-routing-system-1.onrender.com/) · [💻 GitHub Repository](https://github.com/Ganeshbasani/AI-Powered-Ticket-Routing-System) · [📸 Screenshots](#-application-showcase)
-
 </div>
+
+---
+
+## 🔑 Live Demo Access
+
+Explore the deployed application using the dedicated demonstration account.
+
+<table>
+  <tr><th align="left">Demo detail</th><th align="left">Access</th></tr>
+  <tr><td><strong>Application</strong></td><td><a href="https://ai-powered-ticket-routing-system-1.onrender.com/">Open Live Application</a></td></tr>
+  <tr><td><strong>Demo email</strong></td><td><code>demo.admin@ticketroute.local</code></td></tr>
+  <tr><td><strong>Demo password</strong></td><td><code>RouteDemo!20261</code></td></tr>
+  <tr><td><strong>Access role</strong></td><td>Administrator</td></tr>
+</table>
+
+> **Demo account:** Use this account only for exploring the public demonstration. Do not enter sensitive or real organizational information.
+
+---
+
+## 📸 Application at a Glance
+
+The four primary screens below give recruiters and reviewers an immediate overview of the application. Select an image to view it at full size.
+
+<table>
+  <tr>
+    <td width="50%" align="center"><strong>📊 Admin Dashboard</strong><br/><a href="screenshots/dashboard.png"><img src="screenshots/dashboard.png" width="100%" alt="Administrative dashboard"/></a></td>
+    <td width="50%" align="center"><strong>🎫 Ticket Management</strong><br/><a href="screenshots/tickets.png"><img src="screenshots/tickets.png" width="100%" alt="Ticket management"/></a></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><strong>🔮 SLA Predictions</strong><br/><a href="screenshots/prediction.png"><img src="screenshots/prediction.png" width="100%" alt="SLA prediction"/></a></td>
+    <td width="50%" align="center"><strong>📈 Analytics</strong><br/><a href="screenshots/Analytics.png"><img src="screenshots/Analytics.png" width="100%" alt="Analytics dashboard"/></a></td>
+  </tr>
+</table>
 
 ---
 
