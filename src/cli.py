@@ -47,14 +47,16 @@ def main() -> None:
         print(json.dumps({"message": "Demo account and sample tickets are ready.", "user_id": user_id, "email": email}))
     elif args.command == "ensure-admin":
         demo_email, demo_password = os.environ.get("DEMO_ADMIN_EMAIL"), os.environ.get("DEMO_ADMIN_PASSWORD")
+        database = Database(settings.database_path)
+        database.initialize()
+        repository = TicketRepository(database)
         if demo_email and demo_password:
-            repository = TicketRepository(Database(settings.database_path)); repository.database.initialize()
             user_id = setup_demo_account(repository, demo_email, demo_password)
             print(json.dumps({"message": "Demo admin and tickets are ready.", "user_id": user_id, "email": demo_email}))
-        elif TicketRepository(Database(settings.database_path)).has_administrator():
+        elif repository.has_administrator():
             print("Administrator already exists.")
         else:
-            print(bootstrap_admin())
+            print(bootstrap_admin(database=database))
     elif args.command == "generate-synthetic":
         output = Path(args.path or f"data/synthetic/{args.size}.csv")
         manifest = Path(args.manifest or output.with_suffix(".manifest.json"))
