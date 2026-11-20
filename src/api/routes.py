@@ -11,7 +11,9 @@ from werkzeug.security import check_password_hash
 
 from src.api.errors import APIError
 from src.config.settings import settings
+from src.ml.candidate_service import CandidateArtifactError
 from src.platform.services import AuthenticationError, MockJiraProvider, ROLES
+from src.ml.sla_policy import assess_sla, policy_description
 
 api_blueprint = Blueprint("api", __name__)
 
@@ -27,23 +29,67 @@ def _payload() -> dict[str, Any]:
     return payload
 
 
-def _ticket_fields(payload: dict[str, Any]) -> dict[str, Any]:
-    required = {"summary", "priority", "created_hours"}
+def _ticket_fields(payload: dict[str, Any], *, require_age: bool = True) -> dict[str, Any]:
+    required = {"summary", "priority"} | ({"created_hours"} if require_age else set())
     if not required.issubset(payload):
-        raise APIError("Missing required fields: summary, priority, created_hours.")
+        raise APIError("Missing required fields: " + ", ".join(sorted(required - set(payload))) + ".")
     if not isinstance(payload["summary"], str) or not payload["summary"].strip():
         raise APIError("Field 'summary' must be a non-empty string.")
+    if len(payload["summary"].strip()) > 240:
+        raise APIError("Field 'summary' must be at most 240 characters.")
+    if payload.get("description") is not None and not isinstance(payload.get("description"), str):
+        raise APIError("Field 'description' must be text.")
+    if payload.get("assigned_team") is not None and not isinstance(payload.get("assigned_team"), str):
+        raise APIError("Field 'assigned_team' must be text.")
+    if payload.get("status") is not None and (not isinstance(payload.get("status"), str) or not payload["status"].strip()):
+        raise APIError("Field 'status' must be non-empty text.")
     if payload["priority"] not in settings.priority_map:
-        raise APIError("Field 'priority' must be a supported priority.")
+        supported = ", ".join(settings.priority_map)
+        raise APIError(f"Field 'priority' must be one of: {supported}.")
     try:
-        if isinstance(payload["created_hours"], bool):
+        if isinstance(payload.get("created_hours", 0), bool):
             raise ValueError
-        age = float(payload["created_hours"])
+        age = float(payload.get("created_hours", 0))
     except (TypeError, ValueError) as error:
         raise APIError("Field 'created_hours' must be a number.") from error
     if not math.isfinite(age) or age < 0:
         raise APIError("Field 'created_hours' must be a finite, non-negative number.")
     return {**payload, "created_hours": age}
+
+
+def _store_ml_assessment(ticket: dict[str, Any]) -> dict[str, Any]:
+    """Persist model suggestions when a checksum-verified artifact is available."""
+    repository = _extensions("ticket_repository")
+    try:
+        result = _extensions("candidate_model_service").predict(ticket)
+    except (CandidateArtifactError, ValueError) as error:
+        return {"status": "unavailable", "message": str(error), "review_required": True}
+    stored = repository.add_ml_assessment(int(ticket["id"]), result)
+    status = "observed" if result.get("data_origin") == "observed" else "experimental"
+    return {"status": status, **stored}
+
+
+def _ticket_with_live_sla(ticket: dict[str, Any]) -> dict[str, Any]:
+    return {**ticket, "sla_assessment": assess_sla(ticket["priority"], ticket["created_hours"])}
+
+
+def _dashboard_sla(analytics: dict[str, Any]) -> dict[str, Any]:
+    repository = _extensions("ticket_repository")
+    active = repository.active_tickets()
+    evaluated = [_ticket_with_live_sla(ticket) for ticket in active]
+    alerting = [item for item in evaluated if item["sla_assessment"]["sla_breach_risk"] == "High"]
+    analytics["active_breached_tickets"] = sum(item["sla_assessment"]["sla_status"] == "Breached" for item in evaluated)
+    analytics["active_approaching_tickets"] = sum(item["sla_assessment"]["sla_status"] == "Approaching target" for item in evaluated)
+    analytics["active_high_risk_tickets"] = len(alerting)
+    analytics["sla_alerts"] = [
+        {"id": item["id"], "summary": item["summary"], "priority": item["priority"],
+         "status": item["status"], "assigned_team": item["assigned_team"],
+         **item["sla_assessment"]}
+        for item in sorted(alerting, key=lambda entry: (entry["sla_assessment"]["sla_status"] != "Breached", entry["sla_assessment"]["remaining_hours"]))[:20]
+    ]
+    # Keep the dashboard's historical metric and add a distinct live count.
+    analytics["predicted_breaches"] = analytics["active_high_risk_tickets"]
+    return analytics
 
 
 def require_roles(*roles: str) -> Callable:
@@ -71,10 +117,87 @@ def health():
     return {"status": "ok", "request_id": g.request_id}, 200
 
 
+@api_blueprint.post("/support/chat")
+def support_chat():
+    payload = _payload()
+    if not set(payload).issubset({"message", "history", "ticket_id"}) or "message" not in payload:
+        raise APIError("Request body must contain a message and optional chat history and ticket ID.")
+    message = payload.get("message")
+    if not isinstance(message, str):
+        raise APIError("message must be a string.")
+    history = payload.get("history", [])
+    if not isinstance(history, list) or len(history) > 8:
+        raise APIError("history must contain at most 8 recent messages.")
+    clean_history = []
+    for item in history:
+        if not isinstance(item, dict) or set(item) != {"role", "content"}:
+            raise APIError("Each history item must contain role and content.")
+        if item["role"] not in {"user", "assistant"} or not isinstance(item["content"], str) or len(item["content"]) > 1_200:
+            raise APIError("History messages must be short user or assistant messages.")
+        clean_history.append({"role": item["role"], "content": item["content"]})
+    ticket_id = payload.get("ticket_id")
+    if ticket_id is not None and (isinstance(ticket_id, bool) or not isinstance(ticket_id, int) or ticket_id < 1):
+        raise APIError("ticket_id must be a positive integer.")
+    user = None
+    auth = request.headers.get("Authorization", "")
+    if auth:
+        if not auth.startswith("Bearer "):
+            raise APIError("Invalid authorization header.", 401, "authentication_failed")
+        try:
+            claims = _extensions("token_service").verify(auth[7:])
+        except AuthenticationError as error:
+            raise APIError(str(error), 401, "authentication_failed") from error
+        user = _extensions("ticket_repository").get_user_by_id(claims["id"])
+        if not user or user.get("disabled") or user.get("role") not in ROLES:
+            raise APIError("You do not have permission to use this action.", 403, "forbidden")
+    if ticket_id is not None and user is None:
+        raise APIError("Sign in to include ticket information.", 401, "authentication_required")
+    try:
+        response = _extensions("project_support_bot").answer(
+            message,
+            history=clean_history,
+            repository=_extensions("ticket_repository") if user else None,
+            allow_ticket_context=user is not None,
+            ticket_id=ticket_id,
+        )
+    except ValueError as error:
+        raise APIError(str(error)) from error
+    return {"response": response, "request_id": g.request_id}, 200
+
+
+@api_blueprint.get("/support/status")
+def support_status():
+    return {"local_llm": _extensions("local_support_llm").status(), "request_id": g.request_id}, 200
+
+
+@api_blueprint.get("/demo-info")
+def demo_info():
+    """Expose local demo login details only in development environments."""
+    if settings.environment != "development":
+        return {"enabled": False}, 200
+    email = current_app.config.get("DEMO_ADMIN_EMAIL")
+    password = current_app.config.get("DEMO_ADMIN_PASSWORD")
+    if not email or not password:
+        return {"enabled": False}, 200
+    return {"enabled": True, "email": email, "password": password}, 200
+
+
 @api_blueprint.get("/ready")
 def readiness():
-    ready, _ = _extensions("model_service").readiness()
-    return {"status": "ready" if ready else "not_ready", "request_id": g.request_id}, 200 if ready else 503
+    policy = policy_description()
+    model_status = _extensions("candidate_model_service").status()
+    origins = {item.get("data_origin") for item in model_status.values() if item.get("available")}
+    observed_ready = all(model_status.get(kind, {}).get("available") and model_status[kind].get("data_origin") == "observed" for kind in ("routing", "sla"))
+    ml_status = "observed_models_ready" if observed_ready else ("synthetic_candidates_only" if origins else "models_unavailable")
+    return {"status": "ready", "sla_policy_version": policy["version"],
+            "sla_policy": policy, "ml_status": ml_status, "models": model_status,
+            "request_id": g.request_id}, 200
+
+
+@api_blueprint.get("/models/candidates")
+@require_roles("admin", "analyst", "support_agent")
+def candidate_model_status():
+    return {"models": _extensions("candidate_model_service").status(), "request_id": g.request_id}, 200
 
 
 @api_blueprint.post("/predict")
@@ -139,9 +262,15 @@ def update_user(user_id: int):
 @api_blueprint.post("/tickets")
 @require_roles("admin", "support_agent")
 def create_ticket():
-    ticket = _extensions("ticket_repository").upsert_ticket(_ticket_fields(_payload()))
+    payload = _payload()
+    allowed = {"summary", "description", "priority", "created_hours", "assigned_team", "status"}
+    unknown = set(payload) - allowed
+    if unknown:
+        raise APIError(f"Unsupported ticket field(s): {', '.join(sorted(unknown))}.")
+    ticket = _extensions("ticket_repository").upsert_ticket(_ticket_fields(payload, require_age=False))
     _extensions("ticket_repository").audit(g.current_user["email"], "ticket_created", "ticket", str(ticket["id"]))
-    return {"ticket": ticket, "request_id": g.request_id}, 201
+    ml_assessment = _store_ml_assessment(ticket)
+    return {"ticket": ticket, "ml_assessment": ml_assessment, "request_id": g.request_id}, 201
 
 
 @api_blueprint.get("/tickets")
@@ -155,6 +284,7 @@ def list_tickets():
     if priority and priority not in settings.priority_map: raise APIError("priority filter is invalid.")
     repository = _extensions("ticket_repository")
     tickets = repository.list_tickets(limit, offset, priority, status, team, search)
+    tickets = [_ticket_with_live_sla({**ticket, "ml_assessment": repository.latest_ml_assessment(ticket["id"])}) for ticket in tickets]
     return {"tickets": tickets, "limit": limit, "offset": offset, "total": repository.ticket_count(priority, status, team, search), "request_id": g.request_id}, 200
 
 
@@ -163,7 +293,16 @@ def list_tickets():
 def get_ticket(ticket_id: int):
     ticket = _extensions("ticket_repository").get_ticket(ticket_id)
     if not ticket: raise APIError("Ticket not found.", 404, "not_found")
-    return {"ticket": ticket, "request_id": g.request_id}, 200
+    assessment = assess_sla(ticket["priority"], ticket["created_hours"])
+    return {"ticket": ticket, "sla_assessment": assessment,
+            "ml_assessment": _extensions("ticket_repository").latest_ml_assessment(ticket_id),
+            "request_id": g.request_id}, 200
+
+
+@api_blueprint.get("/sla-policy")
+@require_roles("admin", "analyst", "support_agent")
+def sla_policy():
+    return {"policy": policy_description(), "request_id": g.request_id}, 200
 
 
 @api_blueprint.patch("/tickets/<int:ticket_id>")
@@ -178,15 +317,26 @@ def update_ticket(ticket_id: int):
         raise APIError("Ticket not found.", 404, "not_found")
     merged = {**current, **payload}
     validated = _ticket_fields(merged)
-    ticket = _extensions("ticket_repository").update_ticket(ticket_id, validated)
+    ticket = _extensions("ticket_repository").update_ticket(ticket_id, {key: validated[key] for key in payload})
     _extensions("ticket_repository").audit(g.current_user["email"], "ticket_updated", "ticket", str(ticket_id))
-    return {"ticket": ticket, "request_id": g.request_id}, 200
+    ml_assessment = _store_ml_assessment(ticket)
+    return {"ticket": ticket, "ml_assessment": ml_assessment, "request_id": g.request_id}, 200
 
 
 @api_blueprint.get("/analytics")
 @require_roles("admin", "analyst")
 def analytics():
-    return {"analytics": _extensions("ticket_repository").analytics(), "request_id": g.request_id}, 200
+    return {"analytics": _dashboard_sla(_extensions("ticket_repository").analytics()), "request_id": g.request_id}, 200
+
+
+@api_blueprint.get("/sla/alerts")
+@require_roles("admin", "analyst", "support_agent")
+def sla_alerts():
+    analytics = _dashboard_sla({})
+    return {"alerts": analytics["sla_alerts"],
+            "breached": analytics["active_breached_tickets"],
+            "approaching": analytics["active_approaching_tickets"],
+            "request_id": g.request_id}, 200
 
 
 @api_blueprint.post("/tickets/<int:ticket_id>/predict")
@@ -194,8 +344,25 @@ def analytics():
 def predict_ticket(ticket_id: int):
     prediction = _extensions("ticket_service").predict(ticket_id)
     if not prediction: raise APIError("Ticket not found.", 404, "not_found")
+    ticket = _extensions("ticket_repository").get_ticket(ticket_id)
+    prediction["ml_assessment"] = _store_ml_assessment(ticket)
     _extensions("ticket_repository").audit(g.current_user["email"], "ticket_predicted", "ticket", str(ticket_id))
     return {"prediction": prediction, "request_id": g.request_id}, 201
+
+
+@api_blueprint.post("/tickets/<int:ticket_id>/experimental-predict")
+@require_roles("admin", "support_agent")
+def experimental_ticket_prediction(ticket_id: int):
+    ticket = _extensions("ticket_repository").get_ticket(ticket_id)
+    if not ticket:
+        raise APIError("Ticket not found.", 404, "not_found")
+    try:
+        prediction = _extensions("candidate_model_service").predict(ticket)
+    except CandidateArtifactError as error:
+        raise APIError(str(error), 503, "candidate_model_unavailable") from error
+    except ValueError as error:
+        raise APIError(str(error)) from error
+    return {"prediction": prediction, "request_id": g.request_id}, 200
 
 
 @api_blueprint.get("/tickets/<int:ticket_id>/predictions")
@@ -203,6 +370,15 @@ def predict_ticket(ticket_id: int):
 def prediction_history(ticket_id: int):
     if not _extensions("ticket_repository").get_ticket(ticket_id): raise APIError("Ticket not found.", 404, "not_found")
     return {"predictions": _extensions("ticket_repository").predictions_for_ticket(ticket_id), "request_id": g.request_id}, 200
+
+
+@api_blueprint.get("/tickets/<int:ticket_id>/ml-assessments")
+@require_roles("admin", "analyst", "support_agent")
+def ml_assessment_history(ticket_id: int):
+    repository = _extensions("ticket_repository")
+    if not repository.get_ticket(ticket_id):
+        raise APIError("Ticket not found.", 404, "not_found")
+    return {"assessments": repository.ml_assessments_for_ticket(ticket_id), "request_id": g.request_id}, 200
 
 
 @api_blueprint.post("/tickets/<int:ticket_id>/predictions/<int:prediction_id>/decision")

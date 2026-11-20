@@ -13,14 +13,18 @@ from src.api.routes import api_blueprint
 from src.common.logging_config import configure_logging
 from src.config.settings import settings
 from src.ml.model import ModelService
+from src.ml.candidate_service import CandidateModelService
 from src.persistence.database import Database
 from src.persistence.repository import TicketRepository
 from src.platform.services import InMemoryRateLimiter, TicketService, TokenService
 from src.platform.demo import setup_demo_account
+from src.platform.support_bot import ProjectSupportBot
+from src.platform.local_llm import LocalOllamaChat
 
 
 def create_app(
     model_service: ModelService | None = None,
+    candidate_model_service: CandidateModelService | None = None,
     database: Database | None = None,
     token_service: TokenService | None = None,
     rate_limiter: InMemoryRateLimiter | None = None,
@@ -29,16 +33,27 @@ def create_app(
 
     logger = configure_logging(settings.log_level)
 
+    frontend_root = Path(__file__).resolve().parents[2] / "frontend"
+    built_frontend = frontend_root / "dist"
+    source_frontend = frontend_root / "src"
+    # A repository checkout can run directly without a separate frontend build.
+    # Production images still prefer the deterministic build-stage output.
     frontend_directory = (
-        Path(__file__).resolve().parents[2] / "frontend" / "dist"
+        source_frontend
+        if settings.environment in {"development", "test"} and source_frontend.is_dir()
+        else built_frontend if built_frontend.is_dir() else source_frontend
     )
 
     app = Flask(__name__)
 
     app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
+    app.config["DEMO_ADMIN_EMAIL"] = os.environ.get("DEMO_ADMIN_EMAIL", "").strip()
+    app.config["DEMO_ADMIN_PASSWORD"] = os.environ.get("DEMO_ADMIN_PASSWORD", "")
 
     app.extensions["model_service"] = model_service or ModelService()
+    app.extensions["candidate_model_service"] = candidate_model_service or CandidateModelService()
 
+    seed_configured_demo = database is None
     database = database or Database(settings.database_path)
     database.initialize()
 
@@ -48,10 +63,12 @@ def create_app(
     demo_password = os.environ.get("DEMO_ADMIN_PASSWORD", "")
     if bool(demo_email) != bool(demo_password):
         raise RuntimeError("Set both DEMO_ADMIN_EMAIL and DEMO_ADMIN_PASSWORD to enable demo setup.")
-    if demo_email and demo_password:
+    if seed_configured_demo and demo_email and demo_password:
         setup_demo_account(repository, demo_email, demo_password)
 
     app.extensions["ticket_repository"] = repository
+    app.extensions["local_support_llm"] = LocalOllamaChat()
+    app.extensions["project_support_bot"] = ProjectSupportBot(local_llm=app.extensions["local_support_llm"])
     app.extensions["ticket_service"] = TicketService(
         repository,
         app.extensions["model_service"],
@@ -111,6 +128,8 @@ def create_app(
         limits = {
             "api.login": "login",
             "api.predict": "prediction",
+            "api.experimental_ticket_prediction": "prediction",
+            "api.support_chat": "prediction",
             "api.import_mock_jira_ticket": "jira_import",
         }
 
@@ -134,6 +153,14 @@ def create_app(
         response.headers["X-Request-ID"] = g.request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; connect-src 'self'; object-src 'none'; "
+            "base-uri 'self'; frame-ancestors 'none'"
+        )
         return response
 
     @app.errorhandler(APIError)

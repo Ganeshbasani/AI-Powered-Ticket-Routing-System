@@ -2,11 +2,16 @@
   - type: web
     name: ai-powered-ticket-routing-system
     runtime: docker
-    plan: free
+    # Persistent disks require a paid web-service plan on Render.
+    plan: starter
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /api/v1/health
-    autoDeploy: true
+    autoDeployTrigger: commit
+    disk:
+      name: ticket-routing-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: APP_ENV
         value: production
@@ -16,6 +21,10 @@
         value: "10000"
       - key: FLASK_PORT
         value: "10000"
+      - key: FLASK_HOST
+        value: "0.0.0.0"
+      - key: DATABASE_PATH
+        value: /var/data/platform.db
       - key: AUTH_SECRET_KEY
         generateValue: true
       - key: DEMO_ADMIN_EMAIL

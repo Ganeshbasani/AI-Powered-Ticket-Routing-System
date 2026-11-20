@@ -1,16 +1,12 @@
 """Entrypoint for running the SLA breach prediction service."""
 
 from src.api.app import create_app
-from src.config.settings import settings
-from src.ml.model import ModelService
+from src.api.local_runner import run_local_app
 
 
 def main() -> None:
-    model_service = ModelService()
-    model_service.ensure_model()
-
     app = create_app()
-    app.run(host=settings.flask_host, port=settings.flask_port, debug=settings.flask_debug)
+    run_local_app(app)
 
 
 if __name__ == "__main__":

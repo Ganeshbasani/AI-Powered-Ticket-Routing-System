@@ -8,7 +8,7 @@ from enum import Enum
 
 LEGACY_SCHEMA_VERSION = "1.0"
 SCHEMA_VERSION = "1.1"
-PREDICTION_FIELDS = ("priority", "created_hours", "issue_type", "project", "component", "summary", "description", "created_timestamp")
+PREDICTION_FIELDS = ("priority", "created_hours", "issue_type", "project", "component", "summary", "description", "created_timestamp", "prediction_timestamp")
 ROUTING_TARGET_FIELDS = (
     "initial_triage_team", "initial_triage_decided_at", "initial_triage_event_id",
     "initial_triage_decision_source", "initial_triage_source_system", "initial_triage_is_automated",
@@ -85,6 +85,7 @@ FEATURE_REGISTRY = {
     "summary": FeatureDefinition("summary", "text", True, "Ticket summary", "deterministic normalization; combine with description for TF-IDF", "medium"),
     "description": FeatureDefinition("description", "text", True, "Ticket description", "deterministic normalization; combine with summary for TF-IDF", "medium"),
     "created_timestamp": FeatureDefinition("created_timestamp", "timestamp", True, "Ticket creation timestamp", "chronological split anchor", "low"),
+    "prediction_timestamp": FeatureDefinition("prediction_timestamp", "timestamp", True, "Timestamp at which prediction-time fields were captured", "chronological evaluation anchor", "low"),
     "initial_triage_team": FeatureDefinition("initial_triage_team", "label", False, "First authoritative team-routing decision", "target only; requires source profile", "critical"),
     "assigned_team": FeatureDefinition("assigned_team", "categorical", False, "Mutable platform assignment", "exclude without historical provenance", "critical"),
     "actual_sla_breach": FeatureDefinition("actual_sla_breach", "label", False, "Observed SLA outcome", "target only", "critical"),

@@ -1,5 +1,10 @@
 # ML Data and Leakage Audit
 
+> The transparent SLA policy and the separately persisted text-model forecast
+> both run in the ticket workflow. The currently packaged text candidates are
+> trained on synthetic data and are marked experimental. The three-row
+> random-forest artifact is retired and is not used for live predictions.
+
 ## Target and Prediction Point
 
 The current target is the `sla_breach` dataset label: `Yes` is encoded as 1 and
@@ -43,3 +48,22 @@ when that timestamp reflects the production prediction sequence.
 Joblib artifacts must be treated as trusted, locally generated files. Loading an
 artifact from an untrusted source is unsafe because joblib deserialization can
 execute code.
+
+## Runtime Model and Data Status
+
+Ticket creation and a requested reassessment persist the text-model route and
+SLA class, score, uncertainty review flags, prediction-time feature values,
+artifact hashes, training origin, and held-out evaluation metadata in
+`ml_assessments`. Synthetic candidates remain clearly labeled experimental;
+their scores are not treated as production accuracy, and their team suggestion
+never changes the assigned team.
+
+The active SLA status and dashboard alerts use the configured policy with age
+advanced from a stored timestamp reference. `created_hours` returned by the API
+is the current age, not a fixed lifetime value. Business hours, holidays, pauses,
+and extensions still require an organization-specific policy.
+
+The observed model trainer requires at least 200 rows, timestamped features and
+outcomes, source-event provenance, minimum per-class support, a chronological
+holdout, and a minimum holdout F1 of 0.50. The bundled dataset fails this gate.
+See [model training and safeguards](model_training.md).

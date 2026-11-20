@@ -13,6 +13,7 @@ from src.persistence.repository import TicketRepository
 from src.data.pipeline import assess_readiness, ingest, ingest_sqlite, profile_markdown, validate
 from src.data.synthetic import SIZE_PRESETS, write_synthetic_dataset
 from src.ml.candidates import train_candidate_models
+from src.ml.verified_training import train_observed_models
 from src.platform.demo import setup_demo_account
 
 
@@ -30,16 +31,16 @@ def bootstrap_admin(email: str | None = None, password: str | None = None, datab
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["bootstrap-admin", "setup-demo", "ensure-admin", "validate-dataset", "profile-dataset", "assess-dataset", "generate-synthetic", "train-candidates"])
+    parser.add_argument("command", choices=["bootstrap-admin", "setup-demo", "seed-demo", "ensure-admin", "validate-dataset", "profile-dataset", "assess-dataset", "generate-synthetic", "train-candidates", "train-observed"])
     parser.add_argument("path", nargs="?")
     parser.add_argument("--report", default="docs/dataset_profile.md")
     parser.add_argument("--size", choices=sorted(SIZE_PRESETS), default="medium")
     parser.add_argument("--seed", type=int, default=20260826)
     parser.add_argument("--manifest")
-    parser.add_argument("--artifacts", default="ml_model/candidates")
+    parser.add_argument("--artifacts")
     args = parser.parse_args()
     if args.command == "bootstrap-admin": print(bootstrap_admin())
-    elif args.command == "setup-demo":
+    elif args.command in {"setup-demo", "seed-demo"}:
         email, password = os.environ.get("DEMO_ADMIN_EMAIL"), os.environ.get("DEMO_ADMIN_PASSWORD")
         if not email or not password: raise ValueError("DEMO_ADMIN_EMAIL and DEMO_ADMIN_PASSWORD are required.")
         repository = TicketRepository(Database(settings.database_path)); repository.database.initialize()
@@ -65,7 +66,11 @@ def main() -> None:
     elif args.command == "train-candidates":
         if not args.path: parser.error("path is required for candidate training")
         manifest = Path(args.manifest or Path(args.path).with_suffix(".manifest.json"))
-        print(json.dumps(train_candidate_models(args.path, manifest, args.artifacts), indent=2, sort_keys=True))
+        print(json.dumps(train_candidate_models(args.path, manifest, args.artifacts or "ml_model/candidates"), indent=2, sort_keys=True))
+    elif args.command == "train-observed":
+        if not args.path: parser.error("path is required for observed model training")
+        manifest = Path(args.manifest or Path(args.path).with_suffix(".manifest.json"))
+        print(json.dumps(train_observed_models(args.path, manifest, args.artifacts or "ml_model/verified"), indent=2, sort_keys=True))
     elif args.command in {"validate-dataset", "profile-dataset", "assess-dataset"}:
         if not args.path: parser.error("path is required for dataset commands")
         frame = ingest_sqlite(args.path) if Path(args.path).suffix == ".db" else ingest(args.path)

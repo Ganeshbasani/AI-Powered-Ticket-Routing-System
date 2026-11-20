@@ -1,5 +1,5 @@
 {
   "name": "ticket-routing-frontend",
   "private": true,
-  "scripts": { "build": "node build.mjs", "test": "node test.mjs" }
+  "scripts": { "build": "node build.mjs", "test": "node --check src/app.js && node test.mjs" }
 }

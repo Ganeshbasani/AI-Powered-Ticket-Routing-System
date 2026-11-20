@@ -3,7 +3,9 @@
 Schema version `1.1` provides one canonical representation for CSV, JSON,
 SQLite ticket exports, and mock-JIRA exports. Prediction-time columns are
 `priority`, `created_hours`, `issue_type`, `project`, `component`, `summary`,
-`description`, and `created_timestamp`. Outcome-only columns include
+`description`, `created_timestamp`, and `prediction_timestamp`. The prediction
+timestamp anchors when age and text features were captured; observed SLA
+outcomes must be recorded after it. Outcome-only columns include
 `actual_sla_breach`, resolution fields, `final_status`, and `final_team`; they
 must never be supplied to prediction or training features.
 

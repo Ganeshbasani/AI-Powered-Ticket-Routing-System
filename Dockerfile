@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY --chown=app:app . .
 COPY --from=frontend-build --chown=app:app /frontend/dist ./frontend/dist
 
-RUN mkdir -p /app/data && chown -R app:app /app
+RUN mkdir -p /app/data /var/data && chown -R app:app /app /var/data
 
 USER app
 

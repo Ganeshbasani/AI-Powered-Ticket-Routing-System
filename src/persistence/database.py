@@ -41,6 +41,30 @@ CREATE TABLE IF NOT EXISTS prediction_feedback (
     decision TEXT NOT NULL CHECK(decision IN ('accepted', 'overridden')), selected_team TEXT,
     reason TEXT, actor_email TEXT NOT NULL, decided_at TEXT NOT NULL
 );
+"""), (4, """
+ALTER TABLE tickets ADD COLUMN age_reference_at TEXT;
+UPDATE tickets SET age_reference_at = created_at WHERE age_reference_at IS NULL;
+CREATE TABLE IF NOT EXISTS ml_assessments (
+    id INTEGER PRIMARY KEY,
+    ticket_id INTEGER NOT NULL REFERENCES tickets(id),
+    assessed_at TEXT NOT NULL,
+    routing_team TEXT,
+    routing_confidence REAL,
+    routing_margin REAL,
+    routing_review_required INTEGER NOT NULL DEFAULT 1,
+    sla_breach_prediction TEXT CHECK(sla_breach_prediction IN ('Yes', 'No')),
+    sla_confidence REAL,
+    sla_margin REAL,
+    sla_review_required INTEGER NOT NULL DEFAULT 1,
+    routing_model_version TEXT,
+    sla_model_version TEXT,
+    routing_origin TEXT,
+    sla_origin TEXT,
+    routing_artifact_sha256 TEXT,
+    sla_artifact_sha256 TEXT,
+    feature_snapshot_json TEXT NOT NULL,
+    evaluation_json TEXT NOT NULL
+);
 """)]
 
 

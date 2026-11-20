@@ -130,14 +130,15 @@ def assess_readiness(frame: pd.DataFrame, minimum_rows: int = 100) -> DatasetRea
         for column in ("summary", "description")
         if column in frame
     }
-    timestamp_coverage = int(frame["created_timestamp"].notna().sum()) if "created_timestamp" in frame else 0
+    timestamp_column = "prediction_timestamp" if "prediction_timestamp" in frame else "created_timestamp"
+    timestamp_coverage = int(frame[timestamp_column].notna().sum()) if timestamp_column in frame else 0
     target_distribution = _distribution(frame, "actual_sla_breach")
     routing_distribution = _distribution(frame, "initial_triage_team")
     shared_reasons = []
     if len(frame) < minimum_rows:
         shared_reasons.append(f"Only {len(frame)} rows are available; at least {minimum_rows} are required for an initial assessment.")
     if timestamp_coverage == 0:
-        shared_reasons.append("No prediction-time creation timestamps are available for chronological evaluation.")
+        shared_reasons.append("No prediction-time timestamps are available for chronological evaluation.")
     text_total = sum(coverage.values())
     sla_reasons = list(shared_reasons)
     if sum(target_distribution.values()) == 0:

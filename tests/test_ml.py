@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import joblib
 import pandas as pd
 import pytest
 
@@ -70,42 +69,32 @@ def test_validate_ticket_data_rejects_invalid_created_hours(created_hours):
         validate_ticket_data(data_frame)
 
 
-def test_model_service_trains_when_artifact_is_missing(tmp_path):
+def test_model_service_refuses_to_create_retired_three_row_artifact(tmp_path):
     model_service = ModelService(model_path=tmp_path / "sla_model.joblib")
-    model_service.ensure_model()
-
-    assert model_service.model_path.exists()
-
-    artifact = joblib.load(model_service.model_path)
-    assert artifact["feature_schema"] == list(FEATURE_COLUMNS)
-    assert artifact["target_definition"] == "sla_breach: Yes=1, No=0"
-    assert artifact["training_samples"] == 3
-    assert artifact["evaluation"]["status"] == "not_available"
+    with pytest.raises(ValueError, match="three-row SLA baseline is retired"):
+        model_service.ensure_model()
+    assert not model_service.model_path.exists()
 
 
 def test_model_service_predict_uses_training_feature_names(tmp_path):
     model_service = ModelService(model_path=tmp_path / "sla_model.joblib")
     result = model_service.predict("Medium", 5)
 
-    assert result["assigned_team"] in {"L1", "L2"}
+    assert result["assigned_team"] == "Unassigned"
     assert result["sla_breach_risk"] in {"High", "Low"}
+    assert result["model_version"] == "priority-age-policy-v2"
 
 
-def test_fresh_artifact_uses_the_same_pipeline_for_inference(tmp_path):
+def test_policy_result_is_explicitly_separate_from_legacy_model_artifact(tmp_path):
     model_service = ModelService(model_path=tmp_path / "sla_model.joblib")
-    model_service.ensure_model()
-    model = model_service.load_model()
+    service_prediction = model_service.predict("High", 5.0)
 
-    production_input = pd.DataFrame(
-        {"priority": ["High"], "created_hours": [5.0]}, columns=FEATURE_COLUMNS
-    )
-    pipeline_prediction = model.predict(production_input)[0]
-    service_prediction = model_service.predict("High", 5.0)["sla_breach_risk"]
-
-    assert service_prediction == ("High" if pipeline_prediction else "Low")
+    assert model_service.readiness() == (False, "retired; live SLA assessment uses the explicit policy")
+    assert service_prediction["model_version"] == "priority-age-policy-v2"
+    assert service_prediction["sla_status"] == "Breached"
 
 
-def test_corrupt_artifact_is_rebuilt_before_prediction(tmp_path):
+def test_corrupt_legacy_artifact_is_not_used_by_policy_prediction(tmp_path):
     artifact_path = tmp_path / "sla_model.joblib"
     artifact_path.write_bytes(b"not a joblib artifact")
     model_service = ModelService(model_path=artifact_path)
@@ -113,12 +102,13 @@ def test_corrupt_artifact_is_rebuilt_before_prediction(tmp_path):
     result = model_service.predict("Low", 1)
 
     assert result["sla_breach_risk"] in {"High", "Low"}
-    assert joblib.load(artifact_path)["feature_schema"] == list(FEATURE_COLUMNS)
+    assert result["model_version"] == "priority-age-policy-v2"
+    assert artifact_path.read_bytes() == b"not a joblib artifact"
 
 
 @pytest.mark.parametrize(
     ("priority", "created_hours"),
-    [("Critical", 5), ("High", -1), ("Low", float("inf"))],
+    [("Urgent", 5), ("High", -1), ("Low", float("inf"))],
 )
 def test_model_service_rejects_invalid_prediction_inputs(priority, created_hours):
     model_service = ModelService()

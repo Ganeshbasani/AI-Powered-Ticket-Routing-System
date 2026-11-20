@@ -68,5 +68,6 @@ def setup_demo_account(repository: TicketRepository, email: str, password: str) 
         user_id = int(repository.create_user(email, password, "admin")["id"])
 
     for ticket in DEMO_TICKETS:
-        repository.upsert_ticket(ticket)
+        if not repository.get_ticket_by_jira_key(ticket["jira_issue_key"]):
+            repository.upsert_ticket(ticket)
     return user_id

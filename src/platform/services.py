@@ -62,19 +62,24 @@ class TicketService:
         if not ticket:
             return None
         prediction = self.model_service.predict(ticket["priority"], ticket["created_hours"])
+        prediction["assigned_team"] = ticket.get("assigned_team") or "Unassigned"
         stored_prediction = self.repository.add_prediction(ticket_id, prediction)
         snapshot = PredictionSnapshot.create(
             prediction_snapshot_id=str(uuid4()), ticket_id=str(ticket_id),
             source_ticket_key=ticket.get("jira_issue_key") or f"platform-{ticket_id}",
             source_ticket_version=ticket["updated_at"], scored_at=stored_prediction["predicted_at"],
             feature_values={"priority": ticket["priority"], "created_hours": ticket["created_hours"]},
-            feature_schema_version="production-baseline-v1", model_version=prediction["model_version"],
-            model_artifact_sha256=self.model_service.artifact_sha256(), text_normalization_version=None,
-            source_event_ids={"platform_ticket_version": ticket["updated_at"]}, source_system="platform_sqlite",
+            feature_schema_version=prediction["policy_version"], model_version=prediction["model_version"],
+            model_artifact_sha256=prediction["policy_sha256"], text_normalization_version=None,
+            source_event_ids={"platform_ticket_version": ticket["updated_at"], "sla_policy_sha256": prediction["policy_sha256"]}, source_system="platform_sqlite",
             record_origin=RecordOrigin.OBSERVED, synthetic=False,
         )
         self.repository.add_prediction_snapshot(stored_prediction["id"], snapshot)
-        return {**stored_prediction, "prediction_snapshot_id": snapshot.prediction_snapshot_id}
+        return {
+            **stored_prediction,
+            **{key: prediction[key] for key in ("sla_status", "elapsed_hours", "target_hours", "remaining_hours", "warning_window_hours", "explanation", "policy_version")},
+            "prediction_snapshot_id": snapshot.prediction_snapshot_id,
+        }
 
 
 class MockJiraProvider:

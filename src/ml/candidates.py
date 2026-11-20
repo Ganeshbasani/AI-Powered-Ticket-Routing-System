@@ -36,9 +36,18 @@ def train_candidate_models(data_path: Path | str, manifest_path: Path | str, art
         raise ValueError("Candidate training requires an explicitly synthetic manifest in Phase 8C.")
     if len(frame) < 100:
         raise ValueError("Candidate training requires at least 100 records.")
-    train, _, test = chronological_split(frame)
+    if "prediction_timestamp" not in frame or "sla_outcome_observed_at" not in frame:
+        raise ValueError("Candidate training requires prediction and outcome timestamps for temporal evaluation.")
+    prediction_time = pd.to_datetime(frame["prediction_timestamp"], utc=True, errors="coerce")
+    outcome_time = pd.to_datetime(frame["sla_outcome_observed_at"], utc=True, errors="coerce")
+    if prediction_time.isna().any() or outcome_time.isna().any() or (outcome_time <= prediction_time).any():
+        raise ValueError("SLA outcomes must be timestamped after the prediction-time features.")
+    route_train, _, route_test = chronological_split(frame, "created_timestamp")
+    sla_train, _, sla_test = chronological_split(frame, "prediction_timestamp")
+    splits = {"routing": (route_train, route_test), "sla": (sla_train, sla_test)}
     results = {}
     for name, target in (("routing", "initial_triage_team"), ("sla", "actual_sla_breach")):
+        train, test = splits[name]
         if train[target].nunique() < 2 or test[target].nunique() < 2:
             raise ValueError(f"{name} candidate needs at least two classes in train and test data.")
         pipeline = _pipeline()

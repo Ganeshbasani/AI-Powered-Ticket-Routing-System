@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(BASE_DIR / ".env", override=False)
 
-DEFAULT_PRIORITY_MAP = {"Low": 0, "Medium": 1, "High": 2}
+DEFAULT_PRIORITY_MAP = {"Low": 0, "Medium": 1, "High": 2, "Critical": 3}
 VALID_ENVIRONMENTS = {"development", "test", "production"}
 VALID_LOG_LEVELS = {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"}
 
@@ -57,6 +57,14 @@ def _workspace_path(value: str, name: str, base_dir: Path) -> Path:
     return resolved
 
 
+def _database_path(value: str, base_dir: Path) -> Path:
+    """Allow an explicit absolute database mount, while keeping relative paths in-repo."""
+    candidate = Path(value)
+    if candidate.is_absolute():
+        return candidate.resolve()
+    return _workspace_path(value, "DATABASE_PATH", base_dir)
+
+
 @dataclass(frozen=True)
 class Settings:
     """Configuration values safe to use throughout the application."""
@@ -87,7 +95,9 @@ class Settings:
             raise ConfigurationError("APP_ENV must be development, test, or production.")
 
         try:
-            flask_port = int(values.get("FLASK_PORT", "5000"))
+            # Render and other WSGI platforms provide PORT. Keep FLASK_PORT as
+            # the explicit local override for existing .env files.
+            flask_port = int(values.get("FLASK_PORT") or values.get("PORT", "5000"))
         except ValueError as error:
             raise ConfigurationError("FLASK_PORT must be an integer.") from error
         if not 1 <= flask_port <= 65535:
@@ -114,7 +124,7 @@ class Settings:
                 values.get("MODEL_PATH", "ml_model/sla_model.joblib"), "MODEL_PATH", base_dir
             ),
             data_path=_workspace_path(values.get("DATA_PATH", "data/tickets.csv"), "DATA_PATH", base_dir),
-            database_path=_workspace_path(values.get("DATABASE_PATH", "data/platform.db"), "DATABASE_PATH", base_dir),
+            database_path=_database_path(values.get("DATABASE_PATH", "data/platform.db"), base_dir),
             flask_host=values.get("FLASK_HOST", "0.0.0.0"),
             flask_port=flask_port,
             flask_debug=flask_debug,

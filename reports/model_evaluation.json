@@ -1,31 +1,138 @@
 {
-  "model_version": "triage-v1.0",
-  "artifact_version": 2,
-  "training_samples": 1500,
-  "evaluation": {
-    "status": "evaluated",
-    "dataset_type": "synthetic_development_data",
-    "test_size": 0.2,
-    "training_samples": 1500,
-    "routing": {
-      "accuracy": 0.91,
-      "precision": 0.9294,
-      "recall": 0.91,
-      "f1": 0.917
-    },
-    "sla": {
-      "accuracy": 0.8833,
-      "precision": 0.8964,
-      "recall": 0.8833,
-      "f1": 0.8861
+  "candidate_artifacts": {
+    "data_origin": "synthetic",
+    "metrics_are_real_world_evidence": false,
+    "models": {
+      "routing": {
+        "artifact_sha256": "51f6ddc0fa350d46b6abc3a46e745a01841cbfb7ddea3801b042b8dfcf6c4416",
+        "available": true,
+        "evaluation": {
+          "accuracy": 0.7055555555555556,
+          "class_support": {
+            "Identity": 58,
+            "Network": 57,
+            "Workplace": 65
+          },
+          "confusion_matrix": [
+            [
+              40,
+              10,
+              8
+            ],
+            [
+              4,
+              44,
+              9
+            ],
+            [
+              16,
+              6,
+              43
+            ]
+          ],
+          "data_origin": "synthetic",
+          "labels": [
+            "Identity",
+            "Network",
+            "Workplace"
+          ],
+          "macro_f1": 0.7060342846105557,
+          "per_class": {
+            "Identity": {
+              "f1": 0.6779661016949152,
+              "precision": 0.6666666666666666,
+              "recall": 0.6896551724137931
+            },
+            "Network": {
+              "f1": 0.7521367521367521,
+              "precision": 0.7333333333333333,
+              "recall": 0.7719298245614035
+            },
+            "Workplace": {
+              "f1": 0.688,
+              "precision": 0.7166666666666667,
+              "recall": 0.6615384615384615
+            }
+          },
+          "warning": "Synthetic evaluation is pipeline evidence, not production performance."
+        },
+        "evaluation_samples": 180,
+        "model_version": "8c-candidate-3",
+        "training_samples": 840
+      },
+      "sla": {
+        "artifact_sha256": "467835853a99fbdb20ae36d30e5134abfe782b3998401dca35ac23a960d2bb17",
+        "available": true,
+        "evaluation": {
+          "accuracy": 0.8444444444444444,
+          "brier_score": 0.1328217481784738,
+          "class_support": {
+            "No": 116,
+            "Yes": 64
+          },
+          "confusion_matrix": [
+            [
+              106,
+              10
+            ],
+            [
+              18,
+              46
+            ]
+          ],
+          "data_origin": "synthetic",
+          "f1": 0.825,
+          "labels": [
+            "No",
+            "Yes"
+          ],
+          "per_class": {
+            "No": {
+              "f1": 0.8833333333333333,
+              "precision": 0.8548387096774194,
+              "recall": 0.9137931034482759
+            },
+            "Yes": {
+              "f1": 0.7666666666666667,
+              "precision": 0.8214285714285714,
+              "recall": 0.71875
+            }
+          },
+          "precision": 0.8381336405529953,
+          "recall": 0.8162715517241379,
+          "threshold": 0.5,
+          "warning": "Synthetic evaluation is pipeline evidence, not production performance."
+        },
+        "evaluation_samples": 180,
+        "model_version": "8c-candidate-3",
+        "training_samples": 840
+      }
     }
   },
-  "routing_classes": [
-    "L1-General",
-    "L1-Hardware",
-    "L2-Application",
-    "L2-Network",
-    "L3-Database",
-    "Security"
-  ]
+  "generated_at": "2026-11-20T12:05:19.551960+00:00",
+  "legacy_sla_artifact": {
+    "evaluation": {
+      "reason": "The dataset is too small for a valid held-out evaluation.",
+      "status": "not_available"
+    },
+    "model_version": "phase3-1",
+    "path": "ml_model/sla_model.joblib",
+    "training_samples": 3,
+    "used_by_live_sla_assessment": false
+  },
+  "legacy_triage_artifact": {
+    "note": "This artifact requires a removed Python class and cannot be loaded by the current code.",
+    "path": "ml_model/ticket_triage_models.joblib",
+    "status": "retired and not used by runtime"
+  },
+  "previous_report_superseded": "Prior triage-v1 report metrics did not match the currently loadable candidate artifacts.",
+  "purpose": "Artifact inventory and evaluation provenance; not a real-world performance claim.",
+  "report_version": 2,
+  "runtime": {
+    "current_project_data_ready_for_observed_training": false,
+    "observed_label_models_available": false,
+    "reason": "The bundled CSV has 3 rows, no prediction timestamps, and no authoritative routing/SLA provenance.",
+    "sla_assessment": "priority-age-policy-v2",
+    "sla_assessment_is_ml": false
+  }
 }

@@ -30,7 +30,7 @@
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square"/>
 </p>
 
-**A machine-learning-assisted ticket management prototype that predicts SLA breach risk and provides a baseline team-routing recommendation through a Flask API.**
+**A ticket operations demo with transparent SLA risk assessment, local project help, and experimental ML candidates through a Flask API.**
 
 [Live Demo](https://ai-powered-ticket-routing-system-1.onrender.com) · [Source Code](https://github.com/Ganeshbasani/AI-Powered-Ticket-Routing)
 
@@ -40,18 +40,22 @@
 
 ## ✨ What does it do?
 
-Support teams handle tickets with different priorities, workloads, and response expectations. This project explores how a machine-learning-assisted workflow can help identify tickets that may need attention.
+Support teams handle tickets with different priorities, workloads, and response expectations. This project demonstrates ticket operations and a transparent, configurable SLA risk assessment.
 
-The application combines a Flask REST API, a Random Forest classification workflow, and a ticket-management platform to demonstrate:
+The application combines a Flask REST API, a ticket-management platform, and separate experimental ML candidates to demonstrate:
 
-- **SLA risk prediction** — returns a binary risk label for a ticket.
-- **Team recommendation** — provides a baseline routing recommendation.
-- **Ticket operations** — supports ticket creation and platform workflows.
+- **SLA risk assessment** — compares ticket priority and elapsed age with configured targets and a warning window; the same rule drives the UI and saved assessments.
+- **Team assignment** — stores a team's assignment on the ticket; automatic routing is not configured or claimed as accurate.
+- **Ticket operations** — supports ticket creation, text-based team suggestions, and platform workflows.
 - **Role-based access** — separates administrator, analyst, and support-agent permissions.
 - **Operational visibility** — includes health/readiness endpoints and request IDs.
 - **Dataset assessment** — validates input data and highlights limitations before model evaluation.
 
-> **Important:** This is a prototype, not a production-validated SLA prediction system. The bundled dataset contains only three sample records and is insufficient to establish model accuracy or real-world performance.
+> **Important:** The default SLA targets (High 4h, Medium 8h, Low 24h) are examples, not a verified service contract. Set them to your organization's policy. The current risk result is a deterministic policy assessment, not a learned or calibrated forecast. The bundled three-row dataset and synthetic text candidates cannot establish real-world model accuracy.
+
+Ticket creation runs the checksum-verified text candidates and stores their routing and SLA outputs with model provenance and review flags. The bundled candidates were trained on synthetic data, so the UI labels their outputs experimental and does not treat their scores as real-world performance. The ticket's assigned team remains unchanged until a person confirms it. The current three-row SLA artifact is retired and is not used for predictions. See [observed model training requirements](docs/model_training.md).
+
+Configure the policy in `.env` using `SLA_TARGET_CRITICAL_HOURS`, `SLA_TARGET_HIGH_HOURS`, `SLA_TARGET_MEDIUM_HOURS`, `SLA_TARGET_LOW_HOURS`, and `SLA_WARNING_FRACTION_PERCENT`. Defaults are 1, 4, 8, and 24 elapsed hours, respectively; replace them with your approved policy. A ticket receives **High** policy risk when its elapsed age reaches the target or falls within the warning window; otherwise it receives **Low** policy risk. For example, a Medium ticket at 6.5 hours with the default 8-hour target has 1.5 hours remaining; the 2-hour warning window makes it **Approaching target / High risk**. The assessment uses priority and elapsed age only. Ticket text, actual outcomes, business hours, holidays, and pause rules do not affect it.
 
 ## 🚀 Live Demo
 
@@ -64,35 +68,58 @@ The application combines a Flask REST API, a Random Forest classification workfl
 | Demo access | Details |
 |---|---|
 | Application | [Open live application](https://ai-powered-ticket-routing-system-1.onrender.com) |
-| Demo email | `recruiter.demo@ticketrouting.app` |
-| Account role | `admin` |
-| Password | Supplied privately by the project maintainer. |
+| Demo access | Local development only; credentials are configured in `.env`. |
 
 The demo account was created for application review. Keep its password private and do not commit credentials, tokens, or production secrets to this repository.
 
-**Suggested demo walkthrough**
-1. Open the live application.
-2. Sign in using the demo account credentials supplied by the project maintainer.
-3. Explore the dashboard, tickets, analytics, user administration, and ML lab.
-4. Open a ticket, request an SLA prediction, then accept or override its routing recommendation.
-5. Create a ticket or import a mock JIRA issue to explore the workflow end to end.
+**Local recruiter demo**
 
-For a local recruiter demo, set `DEMO_ADMIN_EMAIL` and `DEMO_ADMIN_PASSWORD` in `.env`, then start the app. On startup it creates the admin account once and seeds eight editable `DEMO-*` tickets. The user password is hashed in SQLite. The demo email and password must also be configured as Render environment variables for the hosted demo; the password is intentionally not committed to the repository.
+Set `DEMO_ADMIN_EMAIL=demo.admin@ticketroute.local` and `DEMO_ADMIN_PASSWORD` in `.env`, then run:
+
+```bash
+python -m src.cli seed-demo
+python app.py
+```
+
+The development server opens the browser automatically and prints the actual URL. It starts at the configured `FLASK_PORT` (default `5000`) and selects the next available port if that port is busy; `PORT` is honored when `FLASK_PORT` is unset. Set `OPEN_BROWSER=false` to suppress automatic browser launch. The development login screen displays the configured credentials. The setup command is safe to rerun: it creates the admin only when absent and inserts only missing `DEMO-*` tickets, without changing existing ticket records or the account password. The login credential display is disabled in production. A hosted database must be seeded separately before that environment can accept the demo login.
+
+After signing in, use the dashboard walkthrough to try predictions, accept or override decisions, analytics, mock JIRA import, user administration, and the ML lab.
+
+### Optional local project help LLM
+
+The **Project help** chat works without a language model by searching the bundled FAQ and project documentation. To enable interactive local LLM answers, install [Ollama](https://ollama.com/download), start it, and download a local model:
+
+```bash
+ollama pull gemma4:e2b
+```
+
+Keep these settings in `.env` (the defaults below use Ollama on this computer):
+
+```dotenv
+SUPPORT_LLM_ENABLED=true
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=gemma4:e2b
+OLLAMA_TIMEOUT_SECONDS=90
+```
+
+Restart `python app.py`. The chat status reports whether the local model is ready. Signed-in users can ask about workflows, ticket details, and aggregate analytics; the assistant includes only a few relevant ticket records and limited project documentation in each local request. Chat history stays in the browser tab. Login-screen questions use project documentation only. If Ollama is stopped or the model is missing, the docs assistant continues to answer. The integration only accepts a loopback Ollama URL, so prompts and ticket context are not sent to a hosted model.
 
 ## 🧩 Core capabilities
 
 | Area | Capability |
 |---|---|
-| Prediction | Binary SLA breach-risk label |
-| Routing | Baseline team recommendation |
-| API | Versioned Flask REST endpoints |
+| Prediction | SLA state and High/Low risk from configured priority targets and age |
+| Routing | Ticket text creates a persisted team suggestion; a person confirms assignment |
+| SLA monitoring | Timestamp-based age, policy alerts, and a 30-second dashboard refresh |
+| API | Versioned Flask REST endpoints, including `/api/v1/sla/alerts` |
 | Authentication | Expiring bearer-token authentication |
 | Authorization | Admin, analyst, and support-agent roles |
 | User management | Protected administrator endpoints |
-| Readiness | Health and model-readiness checks |
+| Readiness | Health and configured SLA-policy readiness |
 | Reliability | Request IDs and structured error responses |
 | Data quality | CSV, JSON, and SQLite ticket export validation |
-| ML foundation | Random Forest SLA baseline plus isolated TF-IDF routing/SLA candidate workflows |
+| Risk method | Configurable priority/age SLA policy |
+| ML experiments | Side-by-side synthetic TF-IDF routing/SLA candidates, marked experimental |
 | Testing | Pytest test suite |
 | Deployment | Docker image and GitHub Actions CI |
 
@@ -105,10 +132,10 @@ flowchart TD
     C --> D[Authentication & Authorization]
     C --> E[Input Validation]
     E --> F[Prediction Workflow]
-    F --> G[Random Forest Model]
-    F --> H[Baseline Routing Logic]
+    F --> G[Configured SLA Policy]
+    F --> H[Manual Team Assignment]
     G --> I[SLA Risk Label]
-    H --> J[Team Recommendation]
+    H --> J[Current Team Assignment]
     I --> K[API Response]
     J --> K
     K --> B
@@ -119,11 +146,11 @@ flowchart TD
 ```mermaid
 flowchart LR
     A[Ticket Input] --> B[Validate Features]
-    B --> C[Load Model Artifact]
-    C --> D[Random Forest Prediction]
+    B --> C[Configured Priority Targets]
+    C --> D[Compare Age to Target and Warning Window]
     D --> E[Binary SLA Risk Label]
-    B --> F[Baseline Routing Heuristic]
-    F --> G[Suggested Team]
+    B --> F[Manual Team Assignment]
+    F --> G[Assigned Team]
     E --> H[Structured API Response]
     G --> H
 ```
@@ -134,7 +161,7 @@ flowchart LR
 |---|---|
 | Programming language | Python |
 | Backend | Flask |
-| Machine learning | Scikit-learn, Random Forest |
+| Experimental ML | Scikit-learn, Random Forest, TF-IDF candidates |
 | Data processing | Pandas |
 | Model serialization | Joblib |
 | API | REST, JSON |
@@ -218,7 +245,7 @@ Request body:
 
 The endpoint accepts exactly `priority` and `created_hours`.
 
-The response includes the binary SLA risk label, the existing routing heuristic result, model version, and request ID. It does not expose an uncalibrated model probability.
+The response includes the High/Low SLA risk label, SLA state, target and remaining hours, policy version, explanation, assigned team, and request ID. It does not describe the policy result as an ML prediction or probability.
 
 > The response values depend on the running application and model artifact. Treat this JSON as an illustrative request, not a guaranteed prediction result.
 
@@ -249,11 +276,11 @@ The project includes dataset canonicalization for CSV, JSON, and SQLite ticket e
 
 The NLP foundation adds deterministic ticket-text preparation, leakage warnings, and a non-training TF-IDF baseline.
 
-The authenticated **ML lab** in the application explains the production baseline and provides reproducible commands for structured-plus-TF-IDF routing and SLA candidates. Candidates use chronological evaluation and save metrics and provenance alongside their artifacts. Synthetic results are explicitly development evidence and are not presented as production accuracy.
+The authenticated **ML lab** shows whether routing and SLA candidates are trained, displays their synthetic development metrics, and provides reproducible commands. The normal ticket workflow uses the configurable priority/age SLA policy. Open a ticket and choose **Experimental text comparison** to run those candidates against its summary and description beside the configured SLA policy assessment. Candidate results are experimental, uncalibrated, and never written to baseline prediction history. Synthetic results are pipeline evidence, not production accuracy.
 
 ### Dataset limitation
 
-The bundled dataset has only three sample tickets. It is useful for exercising the pipeline, but it is **not sufficient for meaningful model evaluation, production accuracy claims, or reliable real-world SLA conclusions**.
+The bundled dataset has only three sample tickets. It is useful for exercising experimental model pipelines, but it is **not sufficient for meaningful model evaluation or production accuracy claims**. The normal SLA workflow uses explicit configured policy rules rather than learning from this dataset.
 
 Synthetic-development metrics, where available, must not be interpreted as production performance. Production JIRA routing and SLA mappings remain unconfigured.
 

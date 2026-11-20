@@ -15,6 +15,28 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _current_age_hours(ticket: dict[str, Any]) -> float:
+    """Advance the imported age offset from its timestamp reference."""
+    reference = ticket.get("age_reference_at") or ticket.get("created_at")
+    try:
+        created = datetime.fromisoformat(str(reference).replace("Z", "+00:00"))
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=UTC)
+        age = float(ticket.get("created_hours") or 0) + max(
+            0.0, (datetime.now(UTC) - created.astimezone(UTC)).total_seconds() / 3600
+        )
+        return round(age, 4)
+    except (TypeError, ValueError):
+        return max(0.0, float(ticket.get("created_hours") or 0))
+
+
+def _with_current_age(row: Any) -> dict[str, Any]:
+    ticket = dict(row)
+    ticket["created_hours"] = _current_age_hours(ticket)
+    ticket.pop("age_reference_at", None)
+    return ticket
+
+
 class TicketRepository:
     def __init__(self, database: Database) -> None:
         self.database = database
@@ -61,10 +83,10 @@ class TicketRepository:
                 existing = connection.execute("SELECT id FROM tickets WHERE jira_issue_key = ?", (ticket["jira_issue_key"],)).fetchone()
             values = (ticket["summary"], ticket.get("description"), ticket["priority"], ticket["created_hours"], ticket.get("assigned_team"), ticket.get("status", "open"), ticket.get("source", "api"), ticket.get("actual_sla_breach"), now)
             if existing:
-                connection.execute("UPDATE tickets SET summary=?, description=?, priority=?, created_hours=?, assigned_team=?, status=?, source=?, actual_sla_breach=?, updated_at=? WHERE id=?", (*values, existing["id"]))
+                connection.execute("UPDATE tickets SET summary=?, description=?, priority=?, created_hours=?, assigned_team=?, status=?, source=?, actual_sla_breach=?, updated_at=?, age_reference_at=? WHERE id=?", (*values, now, existing["id"]))
                 ticket_id = existing["id"]
             else:
-                cursor = connection.execute("INSERT INTO tickets(jira_issue_key, summary, description, priority, created_hours, assigned_team, status, source, actual_sla_breach, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (ticket.get("jira_issue_key"), *values, now))
+                cursor = connection.execute("INSERT INTO tickets(jira_issue_key, summary, description, priority, created_hours, assigned_team, status, source, actual_sla_breach, created_at, updated_at, age_reference_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (ticket.get("jira_issue_key"), *values, now, now))
                 ticket_id = cursor.lastrowid
             return self.get_ticket(ticket_id, connection)
 
@@ -73,7 +95,12 @@ class TicketRepository:
             with self.database.session() as owned_connection:
                 return self.get_ticket(ticket_id, owned_connection)
         row = connection.execute("SELECT * FROM tickets WHERE id = ?", (ticket_id,)).fetchone()
-        return dict(row) if row else None
+        return _with_current_age(row) if row else None
+
+    def get_ticket_by_jira_key(self, jira_issue_key: str) -> dict[str, Any] | None:
+        with self.database.session() as connection:
+            row = connection.execute("SELECT * FROM tickets WHERE jira_issue_key = ?", (jira_issue_key,)).fetchone()
+            return _with_current_age(row) if row else None
 
     def update_ticket(self, ticket_id: int, fields: dict[str, Any]) -> dict[str, Any] | None:
         allowed = {"summary", "description", "priority", "created_hours", "assigned_team", "status"}
@@ -81,7 +108,11 @@ class TicketRepository:
         if not updates:
             return self.get_ticket(ticket_id)
         assignments = [f"{name} = ?" for name in updates]
-        values = [*updates.values(), _now(), ticket_id]
+        values = [*updates.values(), _now()]
+        if "created_hours" in updates:
+            assignments.append("age_reference_at = ?")
+            values.append(_now())
+        values.append(ticket_id)
         with self.database.session() as connection:
             connection.execute(f"UPDATE tickets SET {', '.join(assignments)}, updated_at = ? WHERE id = ?", values)
             return self.get_ticket(ticket_id, connection)
@@ -96,7 +127,14 @@ class TicketRepository:
         if clauses: query += " WHERE " + " AND ".join(clauses)
         query += " ORDER BY id DESC LIMIT ? OFFSET ?"; params.extend([limit, offset])
         with self.database.session() as connection:
-            return [dict(row) for row in connection.execute(query, params)]
+            return [_with_current_age(row) for row in connection.execute(query, params)]
+
+    def active_tickets(self) -> list[dict[str, Any]]:
+        with self.database.session() as connection:
+            rows = connection.execute(
+                "SELECT * FROM tickets WHERE lower(status) NOT IN ('resolved', 'closed', 'done') ORDER BY id DESC"
+            ).fetchall()
+            return [_with_current_age(row) for row in rows]
 
     def ticket_count(self, priority: str | None = None, status: str | None = None, team: str | None = None, search: str | None = None) -> int:
         clauses, params = [], []
@@ -140,6 +178,71 @@ class TicketRepository:
             connection.execute(f"INSERT INTO prediction_snapshots({columns}) VALUES ({placeholders})", tuple(values.values()))
             row = connection.execute("SELECT * FROM prediction_snapshots WHERE prediction_snapshot_id = ?", (snapshot.prediction_snapshot_id,)).fetchone()
             return dict(row)
+
+    def add_ml_assessment(self, ticket_id: int, assessment: dict[str, Any]) -> dict[str, Any]:
+        """Persist an ML suggestion separately from the deterministic SLA policy history."""
+        routing = assessment.get("routing") or {}
+        sla = assessment.get("sla") or {}
+        metadata = assessment.get("metadata") or {}
+        values = {
+            "ticket_id": ticket_id,
+            "assessed_at": _now(),
+            "routing_team": routing.get("prediction"),
+            "routing_confidence": routing.get("score_percent"),
+            "routing_margin": routing.get("margin_percent"),
+            "routing_review_required": int(bool(routing.get("review_required", True))),
+            "sla_breach_prediction": sla.get("prediction"),
+            "sla_confidence": sla.get("score_percent"),
+            "sla_margin": sla.get("margin_percent"),
+            "sla_review_required": int(bool(sla.get("review_required", True))),
+            "routing_model_version": routing.get("model_version"),
+            "sla_model_version": sla.get("model_version"),
+            "routing_origin": routing.get("data_origin"),
+            "sla_origin": sla.get("data_origin"),
+            "routing_artifact_sha256": routing.get("artifact_sha256"),
+            "sla_artifact_sha256": sla.get("artifact_sha256"),
+            "feature_snapshot_json": json.dumps(assessment.get("features", {}), sort_keys=True),
+            "evaluation_json": json.dumps(metadata, sort_keys=True),
+        }
+        columns = ", ".join(values)
+        placeholders = ", ".join("?" for _ in values)
+        with self.database.session() as connection:
+            cursor = connection.execute(
+                f"INSERT INTO ml_assessments({columns}) VALUES ({placeholders})",
+                tuple(values.values()),
+            )
+            row = connection.execute(
+                "SELECT * FROM ml_assessments WHERE id = ?", (cursor.lastrowid,)
+            ).fetchone()
+            return self._ml_assessment_dict(row)
+
+    @staticmethod
+    def _ml_assessment_dict(row: Any) -> dict[str, Any]:
+        if row is None:
+            return {}
+        assessment = dict(row)
+        assessment["routing_review_required"] = bool(assessment["routing_review_required"])
+        assessment["sla_review_required"] = bool(assessment["sla_review_required"])
+        assessment["features"] = json.loads(assessment.pop("feature_snapshot_json"))
+        assessment["metadata"] = json.loads(assessment.pop("evaluation_json"))
+        assessment["status"] = "observed" if assessment.get("routing_origin") == "observed" and assessment.get("sla_origin") == "observed" else "experimental"
+        return assessment
+
+    def latest_ml_assessment(self, ticket_id: int) -> dict[str, Any] | None:
+        with self.database.session() as connection:
+            row = connection.execute(
+                "SELECT * FROM ml_assessments WHERE ticket_id=? ORDER BY id DESC LIMIT 1",
+                (ticket_id,),
+            ).fetchone()
+            return self._ml_assessment_dict(row) if row else None
+
+    def ml_assessments_for_ticket(self, ticket_id: int) -> list[dict[str, Any]]:
+        with self.database.session() as connection:
+            rows = connection.execute(
+                "SELECT * FROM ml_assessments WHERE ticket_id=? ORDER BY id DESC",
+                (ticket_id,),
+            ).fetchall()
+            return [self._ml_assessment_dict(row) for row in rows]
 
     def record_prediction_feedback(self, ticket_id: int, prediction_id: int, decision: str, selected_team: str | None, reason: str | None, actor_email: str) -> dict[str, Any] | None:
         with self.database.session() as connection:
