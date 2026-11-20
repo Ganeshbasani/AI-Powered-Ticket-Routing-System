@@ -44,7 +44,7 @@ Explore the deployed application using the dedicated demonstration account.
   <tr><th align="left">Demo detail</th><th align="left">Access</th></tr>
   <tr><td><strong>Application</strong></td><td><a href="https://ai-powered-ticket-routing-system-1.onrender.com/">Open Live Application</a></td></tr>
   <tr><td><strong>Demo email</strong></td><td><code>demo.admin@ticketroute.local</code></td></tr>
-  <tr><td><strong>Demo password</strong></td><td><code>RouteDemo!20261</code></td></tr>
+  <tr><td><strong>Demo password</strong></td><td><code>RouteDemo!2026</code></td></tr>
   <tr><td><strong>Access role</strong></td><td>Administrator</td></tr>
 </table>
 
