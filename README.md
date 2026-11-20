@@ -12,7 +12,14 @@
     <img src="https://img.shields.io/badge/GitHub-Source_Code-181717?style=for-the-badge&logo=github" alt="GitHub"/>
   </a>
 </p>
-
+</div>
+Explore the application without creating an account.
+Details	Demo Access
+Application	[Open Live Application](https://ai-powered-ticket-routing-system-1.onrender.com/)
+Demo Email	demo.admin@ticketroute.local
+Demo Password	RouteDemo!20261
+Access Role	Administrator
+Note: This is a public demonstration account. Do not use it for sensitive information or real organizational data.
 <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=23&duration=2500&pause=800&color=00C2FF&center=true&vCenter=true&width=950&lines=Intelligent+Ticket+Management;AI-Assisted+Support+Team+Recommendations;Dynamic+SLA+Breach+Monitoring;Predictive+Risk+Assessment;Built+with+Python+%7C+Flask+%7C+Machine+Learning" alt="Animated project introduction"/>
 
 <p>
